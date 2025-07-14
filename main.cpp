@@ -18,9 +18,9 @@
 #include <chrono>
 
 // #include "imconfig.h"
-// #include "imgui.h"
-// #include "imgui_impl_glfw.h"
-// #include "imgui_impl_vulkan.h"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_vulkan.h"
 // #include "imgui_internal.h"
 // #include "imstb_rectpack.h"
 // #include "imstb_textedit.h"
@@ -44,6 +44,15 @@ const bool enableValidationLayers = false;
 #else
 const bool enableValidationLayers = true;
 #endif
+
+static void check_vk_result(VkResult err)
+{
+    if (err == VK_SUCCESS)
+        return;
+    fprintf(stderr, "[vulkan] Error: VkResult = %d\n", err);
+    if (err < 0)
+        abort();
+}
 
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pDebugMessenger)
 {
@@ -144,7 +153,7 @@ public:
     {
         initWindow();
         initVulkan();
-        // initImGui();
+        initImGui();
         mainLoop();
         cleanup();
     }
@@ -161,8 +170,10 @@ private:
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDevice device;
 
+    VkAllocationCallbacks *NullAllocator = nullptr;
+    VkPipelineCache NullPipelineCache = VK_NULL_HANDLE;
+    uint32_t graphicsQueueFamily = (uint32_t)-1;
     VkQueue graphicsQueue;
-    VkQueue presentQueue;
 
     VkSwapchainKHR swapChain;
     std::vector<VkImage> swapChainImages;
@@ -173,6 +184,7 @@ private:
 
     VkDescriptorSetLayout descriptorSetLayout;
     VkDescriptorPool descriptorPool;
+    VkDescriptorPool imguiDescriptorPool;
     std::vector<VkDescriptorSet> descriptorSets;
 
     std::vector<VkBuffer> uniformBuffers;
@@ -241,7 +253,7 @@ private:
         createIndexBuffer();
         createUniformBuffers(); // creating unifrom Buffers
         createDescriptorPool();
-        createDescripterSets();
+        createDescriptorSets();
         createCommandBuffers();
         createSyncObjects();
     }
@@ -263,6 +275,13 @@ private:
 
         while (!glfwWindowShouldClose(window))
         {
+
+            // Poll and handle events (inputs, window resize, etc.)
+            // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+            // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
+            // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
+            // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
+            
             lastTime = currentTime;
             currentTime = std::chrono::high_resolution_clock::now();
             double dt = std::chrono::duration<double, std::chrono::seconds::period>(currentTime - lastTime).count();
@@ -376,31 +395,33 @@ private:
         glfwTerminate();
     }
 
-    // void initImGui(){
-    //     ImGui::CreateContext();
-    //     ImGuiIO& io = ImGui::GetIO; (void)io;
-    //     ImGui_ImplGlfw_InitForVulkan(window, true);
+    void initImGui()
+    {
+        std::cout << "Initializing Dear ImGui" << std::endl;
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        // ImGuiIO &io = ImGui::GetIO();
 
-    //     ImGui_ImplVulkan_InitInfo init_info = {};
-    //     init_info.Instance = instance;
-    //     init_info.PhysicalDevice = physicalDevice;
-    //     init_info.Device = device;
-    //     init_info.QueueFamily = g_QueueFamily;
-    //     init_info.Queue = g_Queue;
-    //     init_info.PipelineCache = g_PipelineCache;
-    //     init_info.DescriptorPool = g_DescriptorPool;
-    //     init_info.RenderPass = wd->RenderPass;
-    //     init_info.Subpass = 0;
-    //     init_info.MinImageCount = g_MinImageCount;
-    //     init_info.ImageCount = wd->ImageCount;
-    //     init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-    //     init_info.Allocator = g_Allocator;
-    //     init_info.CheckVkResultFn = check_vk_result;
-    //     ImGui_ImplVulkan_Init(&init_info);
+        ImGui_ImplGlfw_InitForVulkan(window, false);
+        ImGui_ImplVulkan_InitInfo init_info = {};
+        init_info.Instance = instance;
+        init_info.PhysicalDevice = physicalDevice;
+        init_info.Device = device;
+        init_info.QueueFamily = graphicsQueueFamily;
+        init_info.Queue = graphicsQueue;
+        init_info.PipelineCache = NullPipelineCache;
+        init_info.DescriptorPool = imguiDescriptorPool;
+        init_info.RenderPass = renderPass;
+        init_info.Subpass = 0;
+        init_info.MinImageCount = 2;
+        init_info.ImageCount = 2;
+        init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+        init_info.Allocator = NullAllocator;
+        init_info.CheckVkResultFn = check_vk_result;
+        ImGui_ImplVulkan_Init(&init_info);
+    }
 
-    // }
-
-    void createDescripterSets()
+    void createDescriptorSets()
     {
         std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, descriptorSetLayout);
         VkDescriptorSetAllocateInfo allocInfo{};
@@ -450,6 +471,11 @@ private:
         if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
         {
             throw std::runtime_error("failed to create descriptor pool!");
+        }
+
+        if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &imguiDescriptorPool) != VK_SUCCESS)
+        {
+            throw std::runtime_error("failed to create imgui descriptor pool!");
         }
     }
 
@@ -658,8 +684,9 @@ private:
             throw std::runtime_error("failed to create logical device!");
         }
 
+        graphicsQueueFamily = indices.graphicsFamily.value();
         vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
-        vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
+        // vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
     }
 
     void createSwapChain()
@@ -793,8 +820,8 @@ private:
 
     void createGraphicsPipeline()
     {
-        auto vertShaderCode = readFile("build/vertShader.spv");
-        auto fragShaderCode = readFile("build/fragShader.spv");
+        auto vertShaderCode = readFile("C:\\messaround\\clonerequiem\\x64\\Debug\\vertShader.spv");
+        auto fragShaderCode = readFile("C:\\messaround\\clonerequiem\\x64\\Debug\\fragShader.spv");
 
         VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
         VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -1133,7 +1160,11 @@ private:
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
 
         vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(vertexIndices.size()), 1, 0, 0, 0);
-
+        ImDrawData *draw_data = ImGui::GetDrawData();
+        if (draw_data != NULL)
+        {
+            ImGui_ImplVulkan_RenderDrawData(draw_data, commandBuffers[currentFrame]);
+        }
         vkCmdEndRenderPass(commandBuffer);
 
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
@@ -1189,6 +1220,14 @@ private:
 
     void drawFrame()
     {
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        static bool show_demo_window = true;
+        if (show_demo_window)
+            ImGui::ShowDemoWindow(&show_demo_window);
+        ImGui::Render();
+
         vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
@@ -1244,7 +1283,7 @@ private:
 
         presentInfo.pImageIndices = &imageIndex;
 
-        result = vkQueuePresentKHR(presentQueue, &presentInfo);
+        result = vkQueuePresentKHR(graphicsQueue, &presentInfo);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized)
         {
@@ -1489,8 +1528,9 @@ private:
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData)
     {
-        std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
-        std::cerr << pUserData << " " << messageType << " " << messageSeverity << std::endl;
+        std::string datanull = pUserData == NULL ? "yes" : "no";
+        std::cerr << "validation layer: " << pCallbackData->pMessage;
+        std::cerr << " Type: " << messageType << " Severity:" << messageSeverity << " userdatanull?:" << datanull << std::endl;
         return VK_FALSE;
     }
 };
