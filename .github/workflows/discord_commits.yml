@@ -19,8 +19,7 @@ jobs:
           footer: New commit in ${{ github.repository }}
           description: |
             Author: ${{ github.event.head_commit.author.name }}
-            Commit message: ```
+            Commit message: ```diff
             **${{ github.event.head_commit.message }}**
-
             ```
             [View Commit](${{ github.event.head_commit.url }})
