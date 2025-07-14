@@ -15,7 +15,7 @@ jobs:
       - name: Send Discord notification
         uses: rjstone/discord-webhook-notify@v1 # or v2 for latest features
         with:
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK_SECRET_FOR_COMMITS_TO_DISCORD_MSGS }}
           message: |
             New commit in ${{ github.repository }}:
             **${{ github.event.head_commit.message }}**
