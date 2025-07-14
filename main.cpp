@@ -303,6 +303,10 @@ private:
         ImGui::Text("About this application");
         ImGui::BulletText("Descriptive text follows");
         ImGui::Separator();
+        ImGui::Text("Licensing");
+        ImGui::BulletText("This software is not licensed.");
+        ImGui::TextWrapped("This software is intentionally left without a license and all copyright belongs to its creator.");
+        ImGui::Separator();
         ImGui::Text("About the creator");
         ImGui::BulletText("(C) 2025 Shaun David Ramsey, Ph.D.");
         ImGui::Indent();
