@@ -54,7 +54,8 @@ static void check_vk_result(VkResult err)
         abort();
 }
 
-static void check_vk_result_with_message(VkResult err, const char *msg) {
+static void check_vk_result_with_message(VkResult err, const char *msg)
+{
     if (err == VK_SUCCESS)
         return;
     fprintf(stderr, "[vulkan] Error: VkResult = %d. With Message %s\n", err, msg);
@@ -271,15 +272,83 @@ private:
         createSyncObjects();
     }
 
+    void drawAbout()
+    {
+        static ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize;
+        // ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_Once);
+        // ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_Once);
+        if (!ImGui::Begin("About", nullptr, window_flags))
+        {
+            ImGui::End();
+            return;
+        }
+
+        ImGui::Text("About this application");
+        ImGui::BulletText("Descriptive text follows");
+        ImGui::Separator();
+        ImGui::Text("Version 0.0.1");
+        ImGui::Text("Built on %s at %s", __DATE__, __TIME__);
+        // ImGui::Text("Using:");
+        // ImGui::Text("GLFW %s", glfwGetVersionString());
+        // ImGui::Text("Vulkan %s", VK_HEADER_VERSION);
+        // ImGui::Text("Dear ImGui %s", ImGui::GetVersion());
+        ImGui::Text("(C) 2025 Shaun David Ramsey, Ph.D.");
+        ImGui::End();
+    }
+
     void drawImGui()
     {
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         static bool show_demo_window = true;
+        static bool hide_all_gui = false;
+        static bool show_about = false;
+
+        if (hide_all_gui)
+        {
+            ImGui::Render();
+            return;
+        }
+
+        if (ImGui::BeginMainMenuBar())
+        {
+            if (ImGui::BeginMenu("File"))
+            {
+                if (ImGui::MenuItem("Exit")) // , "ALT+F4"
+                    glfwSetWindowShouldClose(window, GLFW_TRUE);
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Binds"))
+            {
+                if (ImGui::MenuItem("Toggle GUI", "F2"))
+                {
+                }
+                // ImGui::Separator();
+                if (ImGui::MenuItem("Quit", "ALT+F4"))
+                    glfwSetWindowShouldClose(window, GLFW_TRUE);
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Help"))
+            {
+                if (ImGui::MenuItem("About"))
+                {
+                    show_about = !show_about;
+                }
+                if (ImGui::MenuItem("Toggle ImGui Demo Window"))
+                {
+                    show_demo_window = !show_demo_window;
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMainMenuBar();
+        }
+
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
         // call all the draw stuffs
+        if (show_about)
+            drawAbout();
 
         ImGui::Render();
     }
@@ -517,7 +586,7 @@ private:
             pool_info.maxSets += pool_size.descriptorCount;
         pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
         pool_info.pPoolSizes = pool_sizes;
-      
+
         VkResult err = vkCreateDescriptorPool(device, &pool_info, nullptr, &imguiDescriptorPool);
         check_vk_result_with_message(err, "failed to create imgui descriptor pool");
 
@@ -850,11 +919,11 @@ private:
         VkAttachmentDescription colorAttachment{}; // framebuffer image
         colorAttachment.format = swapChainImageFormat;
         colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD; 
+        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; 
+        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
         VkAttachmentReference colorAttachmentRef{};

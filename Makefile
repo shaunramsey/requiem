@@ -1,3 +1,5 @@
+BUILD_COUNT_FILE = build_number.txt
+TEMP_COUNT_FILE = temp_count.txt
 
 
 IMGUI_PATH = C:\VulkanSDK\imgui
@@ -17,12 +19,12 @@ all: $(TARGET) $(SHADERS)
 debug:
 	echo $(IMGUI_OBJS)
 
-$(TARGET): $(SOURCES) $(IMGUI_OBJS)
+$(TARGET): $(SOURCES) $(IMGUI_OBJS) FORCE
 	cl $(FLAGS) $(SOURCES) $(INCLUDES)  /link $(LIBS) /NODEFAULTLIB:library $(IMGUI_OBJS) /Fe:main.exe 
 
-OBJDIR = build
-
-
+FORCE:
+	@echo "Beginning the Build" 
+	
 build\imgui_impl_vulkan.obj: $(IMGUI_PATH)/backends/imgui_impl_vulkan.cpp
 	cl /c $(FLAGS) $(INCLUDES)  $(IMGUI_PATH)/backends/imgui_impl_vulkan.cpp /Fo:$@
 
