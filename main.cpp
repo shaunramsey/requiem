@@ -14,7 +14,7 @@
 #include <array>
 #include <optional>
 #include <set>
-
+#include <thread>
 #include <chrono>
 
 // #include "imconfig.h"
@@ -160,6 +160,7 @@ class HelloRayMarchSphereApplication
 public:
     void run()
     {
+        initFileLoad();
         initWindow();
         initVulkan();
         initImGui(); // imguiinit call
@@ -170,6 +171,11 @@ public:
     ShaderData UniformData;
 
 private:
+    int _buildNumber = 0;
+    bool _hide_all_gui = false;
+    bool _show_about = true;
+    bool _show_stats = true;
+
     GLFWwindow *window;
 
     VkInstance instance;
@@ -225,6 +231,17 @@ private:
 
     bool framebufferResized = false;
 
+    void initFileLoad()
+    {
+        // Load uniform data from file
+        std::ifstream file("build_number.txt");
+        if (file.is_open())
+        {
+            file >> _buildNumber;
+            file.close();
+        }
+    }
+
     void initWindow()
     {
         glfwInit();
@@ -274,10 +291,10 @@ private:
 
     void drawAbout()
     {
-        static ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize;
-        // ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_Once);
-        // ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_Once);
-        if (!ImGui::Begin("About", nullptr, window_flags))
+        static ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoSavedSettings; // ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize;
+        ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_Once);
+        if (!ImGui::Begin("About", &_show_about, window_flags))
         {
             ImGui::End();
             return;
@@ -286,13 +303,47 @@ private:
         ImGui::Text("About this application");
         ImGui::BulletText("Descriptive text follows");
         ImGui::Separator();
-        ImGui::Text("Version 0.0.1");
-        ImGui::Text("Built on %s at %s", __DATE__, __TIME__);
-        // ImGui::Text("Using:");
-        // ImGui::Text("GLFW %s", glfwGetVersionString());
-        // ImGui::Text("Vulkan %s", VK_HEADER_VERSION);
-        // ImGui::Text("Dear ImGui %s", ImGui::GetVersion());
-        ImGui::Text("(C) 2025 Shaun David Ramsey, Ph.D.");
+        ImGui::Text("About the creator");
+        ImGui::BulletText("(C) 2025 Shaun David Ramsey, Ph.D.");
+        ImGui::Indent();
+        ImGui::TextWrapped("Shaun is a senior computational scientist at Rocketwerkz and a full professor of mathematics and computer science at Washington College.");
+        ImGui::Unindent();
+        ImGui::Separator();
+        ImGui::Text("Build/Version Information");
+        ImGui::BulletText("Version 0.0.1");
+        ImGui::BulletText("Build Number %d", _buildNumber);
+        ImGui::BulletText("Built on %s at %s", __DATE__, __TIME__);
+        ImGui::Separator();
+        ImGui::Text("Built Using:");
+        ImGui::BulletText("GLFW %s", glfwGetVersionString());
+        uint32_t version;
+        vkEnumerateInstanceVersion(&version);
+
+        ImGui::BulletText("Vulkan %d.%d.%d", VK_API_VERSION_MAJOR(version), VK_API_VERSION_MINOR(version), VK_API_VERSION_PATCH(version));
+        ImGui::BulletText("Dear ImGui %s", ImGui::GetVersion());
+
+        ImGui::End();
+    }
+
+    void drawStats()
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        auto lastTime = std::chrono::high_resolution_clock::now();
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        lastTime = currentTime;
+        currentTime = std::chrono::high_resolution_clock::now();
+        double dt = std::chrono::duration<double, std::milli>(currentTime - lastTime).count();
+
+        static ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoSavedSettings || ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize;
+        ImGui::SetNextWindowSize(ImVec2(0, 0), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(40, 20), ImGuiCond_Once);
+        if (!ImGui::Begin("Stats", &_show_stats, window_flags))
+        {
+            ImGui::End();
+            return;
+        }
+
+        ImGui::Text("%.3fms (%.1f FPS)", dt, 1000.0 / dt);
         ImGui::End();
     }
 
@@ -301,11 +352,9 @@ private:
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-        static bool show_demo_window = true;
-        static bool hide_all_gui = false;
-        static bool show_about = false;
+        static bool show_demo_window = false;
 
-        if (hide_all_gui)
+        if (_hide_all_gui)
         {
             ImGui::Render();
             return;
@@ -323,6 +372,7 @@ private:
             {
                 if (ImGui::MenuItem("Toggle GUI", "F2"))
                 {
+                    _hide_all_gui = !_hide_all_gui;
                 }
                 // ImGui::Separator();
                 if (ImGui::MenuItem("Quit", "ALT+F4"))
@@ -333,7 +383,7 @@ private:
             {
                 if (ImGui::MenuItem("About"))
                 {
-                    show_about = !show_about;
+                    _show_about = !_show_about;
                 }
                 if (ImGui::MenuItem("Toggle ImGui Demo Window"))
                 {
@@ -347,8 +397,11 @@ private:
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
         // call all the draw stuffs
-        if (show_about)
+        if (_show_about)
             drawAbout();
+
+        if (_show_stats)
+            drawStats();
 
         ImGui::Render();
     }
@@ -380,6 +433,14 @@ private:
     // {
     //     UniformData.camera -= glm::vec3(0.0, 0.0, 1.0 * dt);
     // }
+
+    void processImGuiEvents()
+    {
+        if (ImGui::IsKeyPressed(ImGuiKey_F2))
+        {
+            _hide_all_gui = !_hide_all_gui;
+        }
+    }
 
     void mainLoop()
     {
@@ -414,6 +475,7 @@ private:
 
             // std::cout << "time is: " << dt << std::endl;
             // std::cout << "    fps: " << 1.0 / dt << std::endl;
+            processImGuiEvents();
             glfwPollEvents();
 
             // get_info();
@@ -1735,11 +1797,6 @@ private:
     }
 };
 
-// void key_callback(GLFWwindow *, int key, int scancode, int action, int mods)
-// {
-//     std::cout << "key: " << key << " scan: " << scancode << " action:" << action << " mods:" << mods << std::endl;
-//     //UniformData.rotation += glm::vec2(0.0, -0.01);
-// }
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
     std::cout << "key: " << key << " scan: " << scancode << " action:" << action << " mods:" << mods << std::endl;
@@ -1766,17 +1823,6 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
     ptr->UniformData.rotation.y = glm::mod(ptr->UniformData.rotation.y, 3.14159265f * 2.0f);
     std::cout << "Mod Rotation Is: " << ptr->UniformData.rotation.x << ", " << ptr->UniformData.rotation.y << std::endl;
 }
-
-/*
-if event.is_action("MWSD",true):
-    mat.set_shader_parameter('cammra', mat.get_shader_parameter('cammra') - Vector3(0.,0.,1))
-elif event.is_action("MWSU",true):
-    mat.set_shader_parameter('cammra', mat.get_shader_parameter('cammra') + Vector3(0.,0.,1))
-if event.is_action("MWD",true):
-    mat.set_shader_parameter('cammra', mat.get_shader_parameter('cammra') - Vector3(0.,0.,0.1))
-elif event.is_action("MWU",true):
-    mat.set_shader_parameter('cammra', mat.get_shader_parameter('cammra') + Vector3(0.,0.,0.1))
-*/
 
 int main()
 {

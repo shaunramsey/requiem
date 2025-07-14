@@ -19,12 +19,9 @@ all: $(TARGET) $(SHADERS)
 debug:
 	echo $(IMGUI_OBJS)
 
-$(TARGET): $(SOURCES) $(IMGUI_OBJS) FORCE
+$(TARGET): $(SOURCES) $(IMGUI_OBJS) 
 	cl $(FLAGS) $(SOURCES) $(INCLUDES)  /link $(LIBS) /NODEFAULTLIB:library $(IMGUI_OBJS) /Fe:main.exe 
 
-FORCE:
-	@echo "Beginning the Build" 
-	
 build\imgui_impl_vulkan.obj: $(IMGUI_PATH)/backends/imgui_impl_vulkan.cpp
 	cl /c $(FLAGS) $(INCLUDES)  $(IMGUI_PATH)/backends/imgui_impl_vulkan.cpp /Fo:$@
 
