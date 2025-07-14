@@ -54,6 +54,14 @@ static void check_vk_result(VkResult err)
         abort();
 }
 
+static void check_vk_result_with_message(VkResult err, const char *msg) {
+    if (err == VK_SUCCESS)
+        return;
+    fprintf(stderr, "[vulkan] Error: VkResult = %d. With Message %s\n", err, msg);
+    if (err < 0)
+        abort();
+}
+
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pDebugMessenger)
 {
     auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
@@ -330,7 +338,7 @@ private:
 
             lastTime = currentTime;
             currentTime = std::chrono::high_resolution_clock::now();
-            double dt = std::chrono::duration<double, std::chrono::seconds::period>(currentTime - lastTime).count();
+            // double dt = std::chrono::duration<double, std::chrono::seconds::period>(currentTime - lastTime).count();
 
             // double tickPeriodSeconds = static_cast<double>(period::num) / period::den;
             // std::cout << "Tick period: " << tickPeriodSeconds << " seconds" << std::endl;
@@ -497,37 +505,34 @@ private:
             throw std::runtime_error("failed to create descriptor pool!");
         }
 
-
         VkDescriptorPoolSize pool_sizes[] =
-        {
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE },
-        };
+            {
+                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE},
+            };
         VkDescriptorPoolCreateInfo pool_info = {};
         pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
         pool_info.maxSets = 0;
-        for (VkDescriptorPoolSize& pool_size : pool_sizes)
+        for (VkDescriptorPoolSize &pool_size : pool_sizes)
             pool_info.maxSets += pool_size.descriptorCount;
         pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
         pool_info.pPoolSizes = pool_sizes;
+      
         VkResult err = vkCreateDescriptorPool(device, &pool_info, nullptr, &imguiDescriptorPool);
-        check_vk_result(err);
+        check_vk_result_with_message(err, "failed to create imgui descriptor pool");
 
-
-
-
-        // VkDescriptorPoolSize imguiPoolSizes[] = {	
-		// 					{VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
-		// 					{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
-		// 					{VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
-		// 					{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
-		// 					{VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
-		// 					{VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
-		// 					{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
-		// 					{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
-		// 					{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
-		// 					{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
-		// 					{VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}
+        // VkDescriptorPoolSize imguiPoolSizes[] = {
+        // 					{VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
+        // 					{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
+        // 					{VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
+        // 					{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
+        // 					{VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
+        // 					{VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
+        // 					{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
+        // 					{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
+        // 					{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
+        // 					{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
+        // 					{VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}
         //                 };
         // // poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         // // poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
@@ -845,11 +850,11 @@ private:
         VkAttachmentDescription colorAttachment{}; // framebuffer image
         colorAttachment.format = swapChainImageFormat;
         colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD; // TODO: see if its working
+        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD; 
         colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // TODO: see if its working
+        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; 
         colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
         VkAttachmentReference colorAttachmentRef{};

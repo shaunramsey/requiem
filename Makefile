@@ -11,7 +11,7 @@ SHADERS = build/fragShader.spv build/vertShader.spv
 
 INCLUDES = /I"C:\VulkanSDK\glfw-3.4.bin.WIN64\include" /I"C:\VulkanSDK\1.4.309.0\Include" /I"C:\VulkanSDK\imgui" /I"C:\VulkanSDK\imgui\backends"
 LIBS = /IMPLIB:"C:\portfolio\VulkanTest\x64\Debug\VulkanTest.lib" /LIBPATH:"C:\VulkanSDK\1.4.309.0\Lib" vulkan-1.lib /LIBPATH:"C:\VulkanSDK\glfw-3.4.bin.WIN64\lib-vc2022" glfw3.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib
-FLAGS = /nologo /Fo.\build\ /W4 /MD /std:c++20 /EHsc /Zi
+FLAGS = /nologo /Fo.\build\ /W4 /MD /std:c++20 /EHsc 
 all: $(TARGET) $(SHADERS)
 
 debug:
