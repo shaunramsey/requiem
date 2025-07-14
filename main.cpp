@@ -146,14 +146,14 @@ const std::vector<uint16_t> vertexIndices = {
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 
-class HelloTriangleApplication
+class HelloRayMarchSphereApplication
 {
 public:
     void run()
     {
         initWindow();
         initVulkan();
-        initImGui();
+        initImGui(); // imguiinit call
         mainLoop();
         cleanup();
     }
@@ -174,6 +174,7 @@ private:
     VkPipelineCache NullPipelineCache = VK_NULL_HANDLE;
     uint32_t graphicsQueueFamily = (uint32_t)-1;
     VkQueue graphicsQueue;
+    VkQueue presentQueue;
 
     VkSwapchainKHR swapChain;
     std::vector<VkImage> swapChainImages;
@@ -192,6 +193,7 @@ private:
     std::vector<void *> uniformBuffersMapped;
 
     VkRenderPass renderPass;
+    VkRenderPass imguiRenderPass;
     VkPipelineLayout pipelineLayout;
     VkPipeline graphicsPipeline;
 
@@ -230,7 +232,7 @@ private:
     // int width, int height
     static void framebufferResizeCallback(GLFWwindow *window, int, int)
     {
-        auto app = reinterpret_cast<HelloTriangleApplication *>(glfwGetWindowUserPointer(window));
+        auto app = reinterpret_cast<HelloRayMarchSphereApplication *>(glfwGetWindowUserPointer(window));
         app->framebufferResized = true;
         // UniformData.res = glm::vec2(width,height);
     }
@@ -245,6 +247,9 @@ private:
         createSwapChain();
         createImageViews();
         createRenderPass();
+
+        createImGuiRenderPass();
+
         createDescriptorSetLayout();
         createGraphicsPipeline(); // start
         createFramebuffers();
@@ -258,14 +263,55 @@ private:
         createSyncObjects();
     }
 
+    void drawImGui()
+    {
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        static bool show_demo_window = true;
+        if (show_demo_window)
+            ImGui::ShowDemoWindow(&show_demo_window);
+        // call all the draw stuffs
+
+        ImGui::Render();
+    }
+
+    //    static float rot_rate = 1.0f;
+    //        // if(frameCount % 60 == 0){
+    // if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+    // {
+    //     UniformData.rotation += glm::vec2(0.0, rot_rate * dt);
+    // }
+    // if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+    // {
+    //     UniformData.rotation += glm::vec2(0.0, -rot_rate * dt);
+    // }
+    // if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+    // {
+    //     UniformData.rotation += glm::vec2(-rot_rate * dt, 0.0);
+    // }
+    // if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+    // {
+    //     UniformData.rotation += glm::vec2(rot_rate * dt, 0.0);
+    // }
+
+    // if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+    // {
+    //     UniformData.camera += glm::vec3(0.0, 0.0, 1.0 * dt);
+    // }
+    // if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+    // {
+    //     UniformData.camera -= glm::vec3(0.0, 0.0, 1.0 * dt);
+    // }
+
     void mainLoop()
     {
+
         // glfwSetWindowOpacity(window,1.0f);
         // start_server(25565);
 
         UniformData.camera = glm::vec3(0.0, 0.0, -3.0);
 
-        // glfwSetKeyCallback(window, key_callback);
         // static auto startTime = std::chrono::high_resolution_clock::now();
         auto lastTime = std::chrono::high_resolution_clock::now();
         auto currentTime = std::chrono::high_resolution_clock::now();
@@ -275,13 +321,13 @@ private:
 
         while (!glfwWindowShouldClose(window))
         {
-
+            drawImGui();
             // Poll and handle events (inputs, window resize, etc.)
             // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
             // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
             // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
             // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-            
+
             lastTime = currentTime;
             currentTime = std::chrono::high_resolution_clock::now();
             double dt = std::chrono::duration<double, std::chrono::seconds::period>(currentTime - lastTime).count();
@@ -296,34 +342,6 @@ private:
             // get_info();
 
             frameCount += 1;
-
-            static float rot_rate = 1.0f;
-            // if(frameCount % 60 == 0){
-            if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-            {
-                UniformData.rotation += glm::vec2(0.0, rot_rate * dt);
-            }
-            if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-            {
-                UniformData.rotation += glm::vec2(0.0, -rot_rate * dt);
-            }
-            if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-            {
-                UniformData.rotation += glm::vec2(-rot_rate * dt, 0.0);
-            }
-            if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-            {
-                UniformData.rotation += glm::vec2(rot_rate * dt, 0.0);
-            }
-
-            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            {
-                UniformData.camera += glm::vec3(0.0, 0.0, 1.0 * dt);
-            }
-            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            {
-                UniformData.camera -= glm::vec3(0.0, 0.0, 1.0 * dt);
-            }
 
             UniformData.rotation.x = glm::mod(UniformData.rotation.x, 3.14159265f * 2.0f);
             UniformData.rotation.y = glm::mod(UniformData.rotation.y, 3.14159265f * 2.0f);
@@ -351,11 +369,16 @@ private:
 
     void cleanup()
     {
-        cleanupSwapChain();
+        std::cout << "Performing Cleanup" << std::endl;
+        ImGui_ImplVulkan_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
 
+        cleanupSwapChain();
         vkDestroyPipeline(device, graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
         vkDestroyRenderPass(device, renderPass, nullptr);
+        vkDestroyRenderPass(device, imguiRenderPass, nullptr);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
         {
@@ -363,6 +386,7 @@ private:
             vkFreeMemory(device, uniformBuffersMemory[i], nullptr);
         }
         vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+        vkDestroyDescriptorPool(device, imguiDescriptorPool, nullptr);
         vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 
         vkDestroyBuffer(device, indexBuffer, nullptr);
@@ -395,14 +419,14 @@ private:
         glfwTerminate();
     }
 
-    void initImGui()
+    void initImGui() // imguiinit
     {
         std::cout << "Initializing Dear ImGui" << std::endl;
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         // ImGuiIO &io = ImGui::GetIO();
-
-        ImGui_ImplGlfw_InitForVulkan(window, false);
+        // glfwSetKeyCallback(window, key_callback);
+        ImGui_ImplGlfw_InitForVulkan(window, true);
         ImGui_ImplVulkan_InitInfo init_info = {};
         init_info.Instance = instance;
         init_info.PhysicalDevice = physicalDevice;
@@ -411,7 +435,7 @@ private:
         init_info.Queue = graphicsQueue;
         init_info.PipelineCache = NullPipelineCache;
         init_info.DescriptorPool = imguiDescriptorPool;
-        init_info.RenderPass = renderPass;
+        init_info.RenderPass = imguiRenderPass;
         init_info.Subpass = 0;
         init_info.MinImageCount = 2;
         init_info.ImageCount = 2;
@@ -473,10 +497,52 @@ private:
             throw std::runtime_error("failed to create descriptor pool!");
         }
 
-        if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &imguiDescriptorPool) != VK_SUCCESS)
+
+        VkDescriptorPoolSize pool_sizes[] =
         {
-            throw std::runtime_error("failed to create imgui descriptor pool!");
-        }
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE },
+        };
+        VkDescriptorPoolCreateInfo pool_info = {};
+        pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        pool_info.maxSets = 0;
+        for (VkDescriptorPoolSize& pool_size : pool_sizes)
+            pool_info.maxSets += pool_size.descriptorCount;
+        pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
+        pool_info.pPoolSizes = pool_sizes;
+        VkResult err = vkCreateDescriptorPool(device, &pool_info, nullptr, &imguiDescriptorPool);
+        check_vk_result(err);
+
+
+
+
+        // VkDescriptorPoolSize imguiPoolSizes[] = {	
+		// 					{VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
+		// 					{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
+		// 					{VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
+		// 					{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
+		// 					{VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
+		// 					{VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
+		// 					{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
+		// 					{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
+		// 					{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
+		// 					{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
+		// 					{VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}
+        //                 };
+        // // poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        // // poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+        // VkDescriptorPoolCreateInfo imguiPoolInfo{};
+        // poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        // poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        // poolInfo.poolSizeCount = (uint32_t)IM_ARRAYSIZE(imguiPoolSizes);
+        // poolInfo.pPoolSizes = imguiPoolSizes;
+        // poolInfo.maxSets = 1000 * IM_ARRAYSIZE(imguiPoolSizes); // static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+        // if (vkCreateDescriptorPool(device, &imguiPoolInfo, nullptr, &imguiDescriptorPool) != VK_SUCCESS)
+        // {
+        //     throw std::runtime_error("failed to create imgui descriptor pool!");
+        // }
     }
 
     void createUniformBuffers()
@@ -686,7 +752,7 @@ private:
 
         graphicsQueueFamily = indices.graphicsFamily.value();
         vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
-        // vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
+        vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
     }
 
     void createSwapChain()
@@ -774,6 +840,50 @@ private:
         }
     }
 
+    void createImGuiRenderPass()
+    {
+        VkAttachmentDescription colorAttachment{}; // framebuffer image
+        colorAttachment.format = swapChainImageFormat;
+        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD; // TODO: see if its working
+        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // TODO: see if its working
+        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        VkAttachmentReference colorAttachmentRef{};
+        colorAttachmentRef.attachment = 0;
+        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkSubpassDescription subpass{};
+        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments = &colorAttachmentRef;
+
+        VkSubpassDependency dependency{};
+        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass = 0;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask = 0;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        VkRenderPassCreateInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        renderPassInfo.attachmentCount = 1;
+        renderPassInfo.pAttachments = &colorAttachment;
+        renderPassInfo.subpassCount = 1;
+        renderPassInfo.pSubpasses = &subpass;
+        renderPassInfo.dependencyCount = 1;
+        renderPassInfo.pDependencies = &dependency;
+
+        if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &imguiRenderPass) != VK_SUCCESS)
+        {
+            throw std::runtime_error("failed to create render pass!");
+        }
+    }
+
     void createRenderPass()
     {
         VkAttachmentDescription colorAttachment{}; // framebuffer image
@@ -784,7 +894,7 @@ private:
         colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
         VkAttachmentReference colorAttachmentRef{};
         colorAttachmentRef.attachment = 0;
@@ -878,7 +988,14 @@ private:
 
         VkPipelineColorBlendAttachmentState colorBlendAttachment{};
         colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        colorBlendAttachment.blendEnable = VK_FALSE;
+        // colorBlendAttachment.blendEnable = VK_FALSE;
+        colorBlendAttachment.blendEnable = VK_TRUE;
+        colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+        colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
         VkPipelineColorBlendStateCreateInfo colorBlending{};
         colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -1160,11 +1277,18 @@ private:
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
 
         vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(vertexIndices.size()), 1, 0, 0, 0);
-        ImDrawData *draw_data = ImGui::GetDrawData();
-        if (draw_data != NULL)
-        {
-            ImGui_ImplVulkan_RenderDrawData(draw_data, commandBuffers[currentFrame]);
-        }
+
+        vkCmdEndRenderPass(commandBuffer);
+
+        VkRenderPassBeginInfo imguiRenderPassInfo{};
+        imguiRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        imguiRenderPassInfo.renderPass = imguiRenderPass;
+        imguiRenderPassInfo.framebuffer = swapChainFramebuffers[imageIndex];
+        imguiRenderPassInfo.renderArea.offset = {0, 0};
+        imguiRenderPassInfo.renderArea.extent = swapChainExtent;
+        /// we need a "barrier/sema/fence" to wait for the render pass to finish
+        vkCmdBeginRenderPass(commandBuffer, &imguiRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffers[currentFrame]);
         vkCmdEndRenderPass(commandBuffer);
 
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
@@ -1220,13 +1344,6 @@ private:
 
     void drawFrame()
     {
-        ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        static bool show_demo_window = true;
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
-        ImGui::Render();
 
         vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
@@ -1283,7 +1400,7 @@ private:
 
         presentInfo.pImageIndices = &imageIndex;
 
-        result = vkQueuePresentKHR(graphicsQueue, &presentInfo);
+        result = vkQueuePresentKHR(presentQueue, &presentInfo);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized)
         {
@@ -1318,10 +1435,19 @@ private:
     {
         for (const auto &availableFormat : availableFormats)
         {
-            if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+            // if (availableFormat.format == VK_FORMAT_R16G16B16A16_SFLOAT && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+            // {
+            //     return availableFormat;
+            // }
+
+            if (availableFormat.format == VK_FORMAT_R8G8B8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
             {
                 return availableFormat;
             }
+            // if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+            // {
+            //     return availableFormat;
+            // }
         }
 
         return availableFormats[0];
@@ -1543,7 +1669,7 @@ private:
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
     std::cout << "key: " << key << " scan: " << scancode << " action:" << action << " mods:" << mods << std::endl;
-    HelloTriangleApplication *ptr = (HelloTriangleApplication *)glfwGetWindowUserPointer(window);
+    HelloRayMarchSphereApplication *ptr = (HelloRayMarchSphereApplication *)glfwGetWindowUserPointer(window);
     bool pressed = action == GLFW_REPEAT || action == GLFW_PRESS;
     if (key == GLFW_KEY_UP && pressed)
     {
@@ -1580,7 +1706,7 @@ elif event.is_action("MWU",true):
 
 int main()
 {
-    HelloTriangleApplication app;
+    HelloRayMarchSphereApplication app;
 
     try
     {
