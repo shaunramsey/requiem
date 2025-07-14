@@ -4,3 +4,4 @@ build
 *.pdb
 *.ilk
 imgui.ini
+actions-runner

@@ -329,15 +329,8 @@ private:
         ImGui::End();
     }
 
-    void drawStats()
+    void drawStats(float dt)
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        auto lastTime = std::chrono::high_resolution_clock::now();
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        lastTime = currentTime;
-        currentTime = std::chrono::high_resolution_clock::now();
-        double dt = std::chrono::duration<double, std::milli>(currentTime - lastTime).count();
-
         static ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoSavedSettings || ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize;
         ImGui::SetNextWindowSize(ImVec2(0, 0), ImGuiCond_Once);
         ImGui::SetNextWindowPos(ImVec2(40, 20), ImGuiCond_Once);
@@ -351,7 +344,7 @@ private:
         ImGui::End();
     }
 
-    void drawImGui()
+    void drawImGui(float dt)
     {
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -405,7 +398,7 @@ private:
             drawAbout();
 
         if (_show_stats)
-            drawStats();
+            drawStats(dt);
 
         ImGui::Render();
     }
@@ -463,16 +456,15 @@ private:
 
         while (!glfwWindowShouldClose(window))
         {
-            drawImGui();
+            lastTime = currentTime;
+            currentTime = std::chrono::high_resolution_clock::now();
+            float dt = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastTime).count();
+            drawImGui(dt);
             // Poll and handle events (inputs, window resize, etc.)
             // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
             // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
             // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
             // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-
-            lastTime = currentTime;
-            currentTime = std::chrono::high_resolution_clock::now();
-            // double dt = std::chrono::duration<double, std::chrono::seconds::period>(currentTime - lastTime).count();
 
             // double tickPeriodSeconds = static_cast<double>(period::num) / period::den;
             // std::cout << "Tick period: " << tickPeriodSeconds << " seconds" << std::endl;

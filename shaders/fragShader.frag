@@ -25,8 +25,8 @@ struct ShaderData{
 const float shadow_dist = 0.01; // 0 - 1
 const float shadow_sharpness = 5.0; // 5-50
 #define HIT_EPS 0.001
-const int max_steps = 256;
-const float max_dist = 100.0;
+const int MAX_STEPS = 2560;
+const float MAX_DIST = 100.0;
 const vec2 EPS = vec2(0.01, 0.0);
 
 // Returns a pseudo-random float in [0, 1)
@@ -154,14 +154,14 @@ float get_shadow(vec3 p, vec3 normal, float sharpness, LightSource light){
     p += normal * shadow_dist; // bias "shadow bias"
     float shadow_distance = 0.0;
     vec3 light_dir = normalize(light.pos - p);
-    for (int i = 0; i< max_steps; i++){
+    for (int i = 0; i< MAX_STEPS; i++){
         // p = ro + rd * t
         vec3 shadow_point = p + light_dir * shadow_distance;
         vec2 hit = map(shadow_point);
         if(abs(hit.x) < HIT_EPS){
             return 0.0;
         }
-        if(shadow_distance > max_dist){
+        if(shadow_distance > MAX_DIST){
             break;
         }
         shadow_distance += hit.x;
@@ -187,7 +187,7 @@ vec3 get_light(float mat_index, vec3 p, vec3 rd, vec3 normal, LightSource light)
 
 vec4 ray_march(vec3 ro, vec3 rd){
     float t = 0.0;
-    for(int i = 0; i < max_steps; i++){
+    for(int i = 0; i < MAX_STEPS; i++){
         vec3 p = ro + rd * t;
         vec2 hit = map(p);
         t += hit.x;
@@ -198,7 +198,7 @@ vec4 ray_march(vec3 ro, vec3 rd){
             color += get_light(hit.y, p, rd, normal, Light2);
             return vec4(color, 1.0);
         }
-        if(t > max_dist) break;
+        if(t > MAX_STEPS) break;
     }
 	return vec4(0.0, 0.0, 0.0, 1.0);
 }
@@ -218,6 +218,17 @@ void main() {
     vec3 rd = normalize(vec3(st, 1));
     
     outColor = ray_march(ro, rd);
+    outColor += ray_march(ro, rd);
+    outColor += ray_march(ro, rd);
+    outColor += ray_march(ro, rd);
+    outColor += ray_march(ro, rd);
+    outColor += ray_march(ro, rd);
+    outColor += ray_march(ro, rd);
+    outColor += ray_march(ro, rd);
+    outColor += ray_march(ro, rd);
+    outColor += ray_march(ro, rd);
+    outColor /= 10.0;
+
     // vec3 col = 0.5 + 0.5*cos(data.time + uv.xyx + vec3(0,2,4));
     // outColor = vec4(col,1.0);
 }

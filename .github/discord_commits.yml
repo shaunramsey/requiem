@@ -1,0 +1,23 @@
+name: Discord Notifications
+
+on:
+  push:
+    branches:
+      - main # or your default branch
+
+jobs:
+  notify-discord:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Send Discord notification
+        uses: rjstone/discord-webhook-notify@v1 # or v2 for latest features
+        with:
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          message: |
+            New commit in ${{ github.repository }}:
+            **${{ github.event.head_commit.message }}**
+            Author: ${{ github.event.head_commit.author.name }}
+            [View Commit](${{ github.event.head_commit.url }})
