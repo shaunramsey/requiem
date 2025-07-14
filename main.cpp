@@ -329,6 +329,7 @@ private:
         ImGui::End();
     }
 
+    //display fps and other statistics
     void drawStats(float dt)
     {
         static ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoSavedSettings || ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize;
