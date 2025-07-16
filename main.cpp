@@ -443,7 +443,7 @@ private:
             drawStats(dt);
 
         if (_show_console)
-        {          
+        {
             drawConsole();
             ImGui::SetWindowFocus("Console");
         }
@@ -492,6 +492,13 @@ private:
         if (ImGui::IsKeyPressed(ImGuiKey_Backslash) || ImGui::IsKeyPressed(ImGuiKey_GraveAccent))
         {
             _show_console = !_show_console;
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_F1))
+        {
+            _console.Log("Test #1", nullptr);
+            _console.WarningLog("Test #2", nullptr);
+            _console.ErrorLog("Test #3", nullptr);
+            _console.DebugLog("Test #4", nullptr);
         }
     }
 

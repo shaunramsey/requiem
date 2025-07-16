@@ -22,11 +22,20 @@ namespace Ramsey
         ImVec4 color;
     };
 
+    void pushNoRepeat(const std::string &s, std::vector<std::string> &vec)
+    {
+        if (vec.size() == 0 || vec.back() != s)
+        {
+            vec.push_back(s);
+        }
+    }
+
     class Console
     {
 
     private:
-        std::vector<ColorString> history;
+        std::vector<ColorString> log_history;
+        std::vector<std::string> command_history;
         int current_index;
 
     public:
@@ -78,8 +87,33 @@ namespace Ramsey
 
         Console()
         {
-            history.push_back(ColorString(""));
+            log_history.push_back(ColorString(""));
+            command_history.push_back("");
             current_index = 1;
+        }
+
+        void DebugLog(const char *fstring, va_list args_list = nullptr)
+        {
+            std::string get_string = formatString(fstring, args_list);
+            log_history.push_back(ColorString("  DEBUG: " + get_string, {0.0f, 0.9f, 0.0f, 1.0f}));
+        }
+
+        void WarningLog(const char *fstring, va_list args_list = nullptr)
+        {
+            std::string get_string = formatString(fstring, args_list);
+            log_history.push_back(ColorString("WARNING: " + get_string, {1.0f, 1.0f, 0.0f, 1.0f}));
+        }
+
+        void ErrorLog(const char *fstring, va_list args_list = nullptr)
+        {
+            std::string get_string = formatString(fstring, args_list);
+            log_history.push_back(ColorString("  ERROR: " + get_string, {1.0f, 0.0f, 0.0f, 1.0f}));
+        }
+
+        void Log(const char *fstring, va_list args_list = nullptr)
+        {
+            std::string get_string = formatString(fstring, args_list);
+            log_history.push_back(ColorString(get_string, {1.0f, 1.0f, 1.0f, 1.0f}));
         }
 
         int executeCommand(std::string s)
@@ -88,14 +122,51 @@ namespace Ramsey
             {
                 s[i] = (char)tolower(s[i]);
             }
-            if (s == "help")
+            if (s.size() == 0)
+                return 0; // do nothing
+            std::string debugLogMessage = " Executing Command: " + s;
+            DebugLog(debugLogMessage.c_str());
+            if (s[0] == '!')
+            { // repeat command
+                int cmd_index = atoi(s.substr(1).c_str());
+                if (cmd_index > 0 && cmd_index < command_history.size())
+                {
+                    executeCommand(command_history[cmd_index]);
+                    return 0;
+                }
+                else
+                {
+                    pushNoRepeat(s, command_history);
+                    log_history.push_back(ColorString("> " + s + " - COMMAND NOT FOUND", {1.0, 0.0, 0.0, 1.0}));
+                    return 0;
+                }
+            }
+            else if (s == "help")
             {
-                history.push_back("> " + s);
+                pushNoRepeat(s, command_history);
+                log_history.push_back("> " + s + " - available commands are: help, clear, history");
+                log_history.push_back(ColorString("> clear - clears the console"));
+                log_history.push_back(ColorString("> history - shows command history"));
+                log_history.push_back(ColorString("> !<number> - repeat command number from history"));
+            }
+            else if (s == "clear" || s == "cls")
+            {
+                pushNoRepeat("clear", command_history);
+                log_history.clear();
+            }
+            else if (s == "history")
+            {
+                pushNoRepeat("history", command_history);
+                log_history.push_back("> " + s + " - command history:");
+                for (int i = 1; i < command_history.size(); i++)
+                {
+                    log_history.push_back(ColorString("[" + std::to_string(i) + "] " + command_history[i], {0.8f, 0.8f, 0.8f, 1.0f}));
+                }
             }
             else
             {
-                history.push_back("> " + s);
-                history.push_back(ColorString("  - COMMAND NOT FOUND", {1.0, 0.0, 0.0, 1.0}));
+                pushNoRepeat(s, command_history);
+                log_history.push_back(ColorString("> " + s + " - COMMAND NOT FOUND", {1.0, 0.0, 0.0, 1.0}));
             }
             return 0;
         }
@@ -120,30 +191,30 @@ namespace Ramsey
                     current_index--;
                     if (current_index < 0)
                     {
-                        current_index = (int)history.size() - 1;
+                        current_index = (int)command_history.size() - 1;
                     }
                     data->DeleteChars(0, data->BufTextLen);
-                    data->InsertChars(0, history[current_index].myString.c_str());
+                    data->InsertChars(0, command_history[current_index].c_str());
                 }
                 else if (data->EventKey == ImGuiKey_DownArrow)
                 {
                     current_index++;
-                    if (current_index > history.size() - 1)
+                    if (current_index > command_history.size() - 1)
                     {
                         current_index = 0;
                     }
                     data->DeleteChars(0, data->BufTextLen);
-                    data->InsertChars(0, history[current_index].myString.c_str());
+                    data->InsertChars(0, command_history[current_index].c_str());
                 }
             }
             return 0;
         }
 
-        void debugPrint(const char *fstring, ...)
-        {
-            std::string final_string = formatString(fstring);
-            history.push_back(ColorString(final_string, {0.7f, 0.9f, 0.9f, 1.0f}));
-        }
+        // void debugPrint(const char *fstring, ...)
+        // {
+        //     std::string final_string = formatString(fstring);
+        //     log_history.push_back(ColorString(final_string, {0.7f, 0.9f, 0.9f, 1.0f}));
+        // }
 
         void draw(bool *p_open = NULL)
         {
@@ -159,8 +230,8 @@ namespace Ramsey
             ImGui::SetNextWindowSize(size, ImGuiCond_Always);
             ImGui::SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.0, 1.0f));
 
-            float grey_value = 0.3f;
-            ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(grey_value, grey_value, grey_value, 0.5f));
+            float grey_value = 0.2f;
+            ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(grey_value, grey_value, grey_value, 0.9f));
             const static ImGuiWindowFlags winFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings;
 
             const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
@@ -173,11 +244,11 @@ namespace Ramsey
             ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height_to_reserve), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_HorizontalScrollbar);
             // ImGui::TextWrapped("> Work Size is %d %d", imguiViewport->WorkSize.x, imguiViewport->WorkSize.y);
             ImGui::TextWrapped("> Hello Console!");
-            for (int i = 0; i < history.size(); i++)
+            for (int i = 0; i < log_history.size(); i++)
             {
-                // debugPrint("imguiDisplay: " + std::to_string(history[i].color.x));
-                ImGui::PushStyleColor(ImGuiCol_Text, history[i].color);
-                ImGui::TextWrapped(history[i].myString.c_str());
+                // debugPrint("imguiDisplay: " + std::to_string(log_history[i].color.x));
+                ImGui::PushStyleColor(ImGuiCol_Text, log_history[i].color);
+                ImGui::TextWrapped(log_history[i].myString.c_str());
                 ImGui::PopStyleColor();
             }
             // ImGui::SetScrollY(ImGui::GetScrollMaxY());
@@ -208,17 +279,20 @@ namespace Ramsey
             // ImGui::SetItemDefaultFocus();
             if (ImGui::InputTextWithHint("##Commands", "Type help for help", commandBuffer, 1023, inputTextFlags, &ConsoleCommandCallback, (void *)this))
             {
+                std::string debugCmd = "> ";
+                debugCmd += commandBuffer;
 
-                debugPrint(commandBuffer);
                 if (commandBuffer[0])
                 { // if the first character is a null character
                     executeCommand(commandBuffer);
-                    current_index = (int)history.size();
+                    current_index = (int)command_history.size();
                     commandBuffer[0] = '\0';
                 }
-                ImGui::SetKeyboardFocusHere(-1);
             }
-            // ImGui::SetItemDefaultFocus();
+            if ((ImGui::IsWindowFocused() || !ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow)) && !ImGui::IsAnyItemActive())
+                ImGui::SetKeyboardFocusHere(-1);
+            // ImGui::SetKeyboardFocusHere(-1);
+            //  ImGui::SetItemDefaultFocus();
 
             // ImGui::End();
             // ImGui::EndChild();
