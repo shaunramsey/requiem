@@ -26,7 +26,7 @@
 // #include "imstb_textedit.h"
 // #include "imstb_truetype.h"
 
-// #include "helper.h"
+#include "Console.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -173,8 +173,9 @@ public:
 private:
     int _buildNumber = 0;
     bool _hide_all_gui = false;
-    bool _show_about = true;
+    bool _show_about = false;
     bool _show_stats = true;
+    bool _show_console = true;
 
     GLFWwindow *window;
 
@@ -228,6 +229,8 @@ private:
     uint32_t currentFrame = 0;
 
     uint64_t frameCount = 0;
+
+    Ramsey::Console _console;
 
     bool framebufferResized = false;
 
@@ -329,20 +332,50 @@ private:
         ImGui::End();
     }
 
-    //display fps and other statistics
-    void drawStats(float dt)
+    // display fps and other statistics
+    void drawStats(float in_dt)
     {
-        static ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoSavedSettings || ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize;
-        ImGui::SetNextWindowSize(ImVec2(0, 0), ImGuiCond_Once);
-        ImGui::SetNextWindowPos(ImVec2(40, 20), ImGuiCond_Once);
+        static float use_dt = 16.0f;
+        static float total_dt = 0.0f;
+        static int frames = 0;
+        total_dt += in_dt;
+        frames++;
+        if (total_dt > 1000.0f)
+        {
+            use_dt = total_dt / frames;
+            total_dt = 0.0f;
+            frames = 0;
+        }
+
+        const ImGuiViewport *viewport = ImGui::GetMainViewport();
+        ImVec2 work_pos = viewport->WorkPos; // Use work area to avoid menu-bar/task-bar, if any!
+        ImVec2 work_size = viewport->WorkSize;
+        ImVec2 win_size = ImVec2(work_pos.x + work_size.x, work_pos.y + work_size.y);
+
+        ImVec2 padding = ImVec2(0.0, 0.0);
+        ImVec2 pos = ImVec2(win_size.x - padding.x, work_pos.y + padding.y);
+        static ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar;
+        ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
+        ImGui::SetNextWindowSize(ImVec2(0, 0));
+        ImGui::SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(1, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
         if (!ImGui::Begin("Stats", &_show_stats, window_flags))
         {
+            ImGui::PopStyleVar();
             ImGui::End();
             return;
         }
 
-        ImGui::Text("%.3fms (%.1f FPS)", dt, 1000.0 / dt);
+        ImGui::Text("%5.1fms (%3.0f FPS)", use_dt, 1000.0 / use_dt);
+        // ImGui::Text("%f, %f -> %f, %f", win_size.x, win_size.y, text_size.x, text_size.y);
+
+        ImGui::PopStyleVar();
         ImGui::End();
+    }
+
+    void drawConsole()
+    {
+        _console.draw(&_show_console);
     }
 
     void drawImGui(float dt)
@@ -362,7 +395,7 @@ private:
         {
             if (ImGui::BeginMenu("File"))
             {
-                if (ImGui::MenuItem("Exit")) // , "ALT+F4"
+                if (ImGui::MenuItem("Exit", "ALT+F4")) // , "ALT+F4"
                     glfwSetWindowShouldClose(window, GLFW_TRUE);
                 ImGui::EndMenu();
             }
@@ -371,6 +404,10 @@ private:
                 if (ImGui::MenuItem("Toggle GUI", "F2"))
                 {
                     _hide_all_gui = !_hide_all_gui;
+                }
+                if (ImGui::MenuItem("Toggle Stats", "F3"))
+                {
+                    _show_stats = !_show_stats;
                 }
                 // ImGui::Separator();
                 if (ImGui::MenuItem("Quit", "ALT+F4"))
@@ -382,6 +419,10 @@ private:
                 if (ImGui::MenuItem("About"))
                 {
                     _show_about = !_show_about;
+                }
+                if (ImGui::MenuItem("Show Stats", "F3"))
+                {
+                    _show_stats = !_show_stats;
                 }
                 if (ImGui::MenuItem("Toggle ImGui Demo Window"))
                 {
@@ -400,6 +441,12 @@ private:
 
         if (_show_stats)
             drawStats(dt);
+
+        if (_show_console)
+        {          
+            drawConsole();
+            ImGui::SetWindowFocus("Console");
+        }
 
         ImGui::Render();
     }
@@ -438,6 +485,14 @@ private:
         {
             _hide_all_gui = !_hide_all_gui;
         }
+        if (ImGui::IsKeyPressed(ImGuiKey_F3))
+        {
+            _show_stats = !_show_stats;
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_Backslash) || ImGui::IsKeyPressed(ImGuiKey_GraveAccent))
+        {
+            _show_console = !_show_console;
+        }
     }
 
     void mainLoop()
@@ -459,7 +514,7 @@ private:
         {
             lastTime = currentTime;
             currentTime = std::chrono::high_resolution_clock::now();
-            float dt = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastTime).count();
+            float dt = std::chrono::duration<float, std::chrono::milliseconds::period>(currentTime - lastTime).count();
             drawImGui(dt);
             // Poll and handle events (inputs, window resize, etc.)
             // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -742,10 +797,10 @@ private:
 
         VkApplicationInfo appInfo{};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-        appInfo.pApplicationName = "Hello Triangle";
-        appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.pEngineName = "No Engine";
-        appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+        appInfo.pApplicationName = "Hello RM Sphere Test"; // TODO: change to production name
+        appInfo.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
+        appInfo.pEngineName = "FluxWerkz";
+        appInfo.engineVersion = VK_MAKE_VERSION(0, 0, 1);
         appInfo.apiVersion = VK_API_VERSION_1_0;
 
         VkInstanceCreateInfo createInfo{};
@@ -1063,8 +1118,11 @@ private:
 
     void createGraphicsPipeline()
     {
-        auto vertShaderCode = readFile("C:\\messaround\\clonerequiem\\x64\\Debug\\vertShader.spv");
-        auto fragShaderCode = readFile("C:\\messaround\\clonerequiem\\x64\\Debug\\fragShader.spv");
+        // auto vertShaderCode = readFile("C:\\messaround\\clonerequiem\\x64\\Debug\\vertShader.spv");
+        // auto fragShaderCode = readFile("C:\\messaround\\clonerequiem\\x64\\Debug\\fragShader.spv");
+
+        auto vertShaderCode = readFile("build\\vertShader.spv");
+        auto fragShaderCode = readFile("build\\fragShader.spv");
 
         VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
         VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);

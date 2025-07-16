@@ -217,18 +217,16 @@ void main() {
     vec3 ro = data.camera; //0,0,-3
     vec3 rd = normalize(vec3(st, 1));
     
-    outColor = ray_march(ro, rd);
-    outColor += ray_march(ro, rd);
-    outColor += ray_march(ro, rd);
-    outColor += ray_march(ro, rd);
-    outColor += ray_march(ro, rd);
-    outColor += ray_march(ro, rd);
-    outColor += ray_march(ro, rd);
-    outColor += ray_march(ro, rd);
-    outColor += ray_march(ro, rd);
-    outColor += ray_march(ro, rd);
-    outColor /= 10.0;
+    const int num_samples = 100; //300, 100, 30
+    vec4 newColor = vec4(0.0);
+    for(int i = 0; i < num_samples; i++){
+        newColor += ray_march(ro+vec3(float(i)*0.05/float(num_samples), 0.0, 0.0), rd);
+    }
 
-    // vec3 col = 0.5 + 0.5*cos(data.time + uv.xyx + vec3(0,2,4));
-    // outColor = vec4(col,1.0);
+    newColor /= float(num_samples);
+
+    vec3 col = 0.5 + 0.5*cos(data.time + st.xyx + vec3(0,2,4));
+    outColor = vec4 ( mix(newColor.xyz, col.xyz, length(newColor)), 1.0);
+    outColor = newColor; 
+
 }

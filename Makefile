@@ -9,6 +9,7 @@ IMGUI_OBJS = "build\imgui.obj" "build\imgui_demo.obj" "build\imgui_draw.obj" "bu
 
 TARGET = main.exe
 SOURCES = main.cpp 
+HEADERS = Console.h
 SHADERS = build/fragShader.spv build/vertShader.spv
 
 INCLUDES = /I"C:\VulkanSDK\glfw-3.4.bin.WIN64\include" /I"C:\VulkanSDK\1.4.309.0\Include" /I"C:\VulkanSDK\imgui" /I"C:\VulkanSDK\imgui\backends"
@@ -19,7 +20,7 @@ all: $(TARGET) $(SHADERS)
 debug:
 	echo $(IMGUI_OBJS)
 
-$(TARGET): $(SOURCES) $(IMGUI_OBJS) 
+$(TARGET): $(SOURCES) $(IMGUI_OBJS) $(HEADERS)
 	cl $(FLAGS) $(SOURCES) $(INCLUDES)  /link $(LIBS) /NODEFAULTLIB:library $(IMGUI_OBJS) /Fe:main.exe 
 
 build\imgui_impl_vulkan.obj: $(IMGUI_PATH)/backends/imgui_impl_vulkan.cpp
