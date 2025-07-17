@@ -495,10 +495,10 @@ private:
         }
         if (ImGui::IsKeyPressed(ImGuiKey_F1))
         {
-            _console.Log("Test #1", nullptr);
-            _console.WarningLog("Test #2", nullptr);
-            _console.ErrorLog("Test #3", nullptr);
-            _console.DebugLog("Test #4", nullptr);
+            _console.Log("F1", "Test #1", nullptr);
+            _console.WarningLog("F1", "Test #2", nullptr);
+            _console.ErrorLog("F1", "Test #3", nullptr);
+            _console.DebugLog("F1", "Test #4", nullptr);
         }
     }
 

@@ -37,6 +37,7 @@ namespace Ramsey
         std::vector<ColorString> log_history;
         std::vector<std::string> command_history;
         int current_index;
+        const std::chrono::time_zone *new_york_tz = std::chrono::locate_zone("America/New_York");
 
     public:
         static std::string formatString(const char *fstring, ...)
@@ -85,35 +86,40 @@ namespace Ramsey
             return final_string;
         }
 
-        Console()
+        Console() : new_york_tz(std::chrono::locate_zone("America/New_York"))
         {
             log_history.push_back(ColorString(""));
             command_history.push_back("");
             current_index = 1;
         }
 
-        void DebugLog(const char *fstring, va_list args_list = nullptr)
+        void addLogHistory(ImVec4 color, const char *environment_desc, const char *prepend, const char *fstring, va_list args_list)
         {
-            std::string get_string = formatString(fstring, args_list);
-            log_history.push_back(ColorString("  DEBUG: " + get_string, {0.0f, 0.9f, 0.0f, 1.0f}));
+            std::string inputString = formatString(fstring, args_list);
+            const auto nynow = std::chrono::zoned_time(new_york_tz, std::chrono::system_clock::now());
+            std::string now = "[";
+            now += std::format("{:%d-%m-%Y %H:%M:%OS}", nynow) + "] [" + environment_desc + "] ";
+            log_history.push_back(ColorString(now + std::string(prepend) + inputString, color));
         }
 
-        void WarningLog(const char *fstring, va_list args_list = nullptr)
+        void DebugLog(const char *environment_desc, const char *fstring, va_list args_list = nullptr)
         {
-            std::string get_string = formatString(fstring, args_list);
-            log_history.push_back(ColorString("WARNING: " + get_string, {1.0f, 1.0f, 0.0f, 1.0f}));
+            addLogHistory({0.0f, 0.9f, 0.0f, 1.0f}, environment_desc, "  DEBUG: ", fstring, args_list);
         }
 
-        void ErrorLog(const char *fstring, va_list args_list = nullptr)
+        void WarningLog(const char *environment_desc, const char *fstring, va_list args_list = nullptr)
         {
-            std::string get_string = formatString(fstring, args_list);
-            log_history.push_back(ColorString("  ERROR: " + get_string, {1.0f, 0.0f, 0.0f, 1.0f}));
+            addLogHistory({1.0f, 1.0f, 0.0f, 1.0f}, environment_desc, "WARNING: ", fstring, args_list);
         }
 
-        void Log(const char *fstring, va_list args_list = nullptr)
+        void ErrorLog(const char *environment_desc, const char *fstring, va_list args_list = nullptr)
         {
-            std::string get_string = formatString(fstring, args_list);
-            log_history.push_back(ColorString(get_string, {1.0f, 1.0f, 1.0f, 1.0f}));
+            addLogHistory({1.0f, 0.0f, 0.0f, 1.0f}, environment_desc, "  ERROR: ", fstring, args_list);
+        }
+
+        void Log(const char *environment_desc, const char *fstring, va_list args_list = nullptr)
+        {
+            addLogHistory({1.0f, 1.0f, 1.0f, 1.0f}, environment_desc, "    LOG: ", fstring, args_list);
         }
 
         int executeCommand(std::string s)
@@ -125,7 +131,7 @@ namespace Ramsey
             if (s.size() == 0)
                 return 0; // do nothing
             std::string debugLogMessage = " Executing Command: " + s;
-            DebugLog(debugLogMessage.c_str());
+            Log("executeCommand", debugLogMessage.c_str());
             if (s[0] == '!')
             { // repeat command
                 int cmd_index = atoi(s.substr(1).c_str());
