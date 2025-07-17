@@ -6,6 +6,9 @@
 #include <string>
 #include <algorithm>
 #include <cstdarg>
+#include <cereal/archives/json.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/string.hpp>
 
 namespace Ramsey
 {
@@ -20,6 +23,11 @@ namespace Ramsey
         }
         std::string myString;
         ImVec4 color;
+         template <class Archive>
+        void serialize(Archive &archive)
+        {
+            archive(cereal::make_nvp("logstring", myString), CEREAL_NVP(color.x), CEREAL_NVP(color.y), CEREAL_NVP(color.z), CEREAL_NVP(color.w));
+        }
     };
 
     void pushNoRepeat(const std::string &s, std::vector<std::string> &vec)
@@ -40,6 +48,12 @@ namespace Ramsey
         const std::chrono::time_zone *new_york_tz = std::chrono::locate_zone("America/New_York");
 
     public:
+        template <class Archive>
+        void serialize(Archive &archive)
+        {
+            archive(CEREAL_NVP(command_history), CEREAL_NVP(log_history));
+        }
+
         static std::string formatString(const char *fstring, ...)
         {
             va_list args;
@@ -168,6 +182,12 @@ namespace Ramsey
                 {
                     log_history.push_back(ColorString("[" + std::to_string(i) + "] " + command_history[i], {0.8f, 0.8f, 0.8f, 1.0f}));
                 }
+            }
+            else if (s == "save")
+            {
+                pushNoRepeat(s, command_history);
+                cereal::JSONOutputArchive oarchive(std::cout);
+                oarchive(*this);
             }
             else
             {
