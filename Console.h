@@ -7,11 +7,8 @@
 #include <string>
 #include <algorithm>
 #include <cstdarg>
-#include <cereal/archives/json.hpp>
-#include <cereal/archives/xml.hpp>
-#include <cereal/types/vector.hpp>
-#include <cereal/types/string.hpp>
 #include <toml++/toml.hpp>
+#include "utils.h"
 
 namespace Ramsey
 {
@@ -26,38 +23,26 @@ namespace Ramsey
         }
         std::string myString;
         ImVec4 color;
-
-        // template <class Archive>
-        // std::string save_minimal(Archive &archive) const
-        // {
-        //     std::string s = myString + " color: " + std::to_string(color.x) + " " + std::to_string(color.y) + " " + std::to_string(color.z) + " " + std::to_string(color.w);
-        //     return s;
-        // }
-
-        // template <class Archive>
-        // void load_minimal(Archive &archive, const std::string &s)
-        // {
-        //     size_t pos = s.find(" color: ");
-        //     myString = s.substr(0, pos);
-        //     std::cout << "loaded string: " << myString << std::endl;
-        //     std::string color_string = s.substr(pos + 8);
-        //     std::cout << "loaded color string: " << color_string << std::endl;
-        //     sscanf(color_string.c_str(), "%f %f %f %f", &color.x, &color.y, &color.z, &color.w);
-        //     std::cout << "loaded color: " << color.x << " " << color.y << " " << color.z << " " << color.w << std::endl;
-        // }
-        template <class Archive>
-        void save(Archive &archive) const
+        toml::array saveToml() const
         {
-            std::vector<float> vcolor = {color.x, color.y, color.z, color.w};
-            archive(cereal::make_nvp("logstring", myString), CEREAL_NVP(vcolor));
+            toml::array arr;
+            arr.push_back(myString);
+            arr.push_back(color.x);
+            arr.push_back(color.y);
+            arr.push_back(color.z);
+            arr.push_back(color.w);
+            return arr;
         }
-
-        template <class Archive>
-        void load(Archive &archive)
+        void loadToml(const toml::array &arr)
         {
-            std::vector<float> vcolor;
-            archive(cereal::make_nvp("logstring", myString), CEREAL_NVP(vcolor));
-            color = ImVec4(vcolor[0], vcolor[1], vcolor[2], vcolor[3]);
+            if (arr.size() >= 5)
+            {
+                myString = arr[0].value<std::string>().value_or("");
+                color.x = arr[1].value<float>().value_or(1.0f);
+                color.y = arr[2].value<float>().value_or(1.0f);
+                color.z = arr[3].value<float>().value_or(1.0f);
+                color.w = arr[4].value<float>().value_or(1.0f);
+            }
         }
     };
 
@@ -79,31 +64,31 @@ namespace Ramsey
         const std::chrono::time_zone *new_york_tz = std::chrono::locate_zone("America/New_York");
 
     public:
-        template <class Archive>
-        void serialize(Archive &archive)
-        {
-            archive(CEREAL_NVP(command_history), CEREAL_NVP(log_history));
-        }
-
         void loadToml(toml::table &tbl)
         {
+            log_history.clear();
+            log_history.push_back(ColorString(""));
+            command_history.clear();
+            command_history.push_back("");
+            current_index = 1;
             if (auto *cs_array = tbl["log_history"].as_array())
             {
                 for (const auto &elem : *cs_array)
                 {
-                    std::cout << " got here 2" << std::endl;
                     if (!elem.is_array())
                         continue;
-                    const auto &tab = *elem.as_array();
-
                     ColorString obj;
-                    obj.myString = tab[0].value<std::string>().value_or("");
-                    obj.color.x = tab[1].value<float>().value_or(1.0f);
-                    obj.color.y = tab[2].value<float>().value_or(1.0f);
-                    obj.color.z = tab[3].value<float>().value_or(1.0f);
-                    obj.color.w = tab[4].value<float>().value_or(1.0f);
-
+                    obj.loadToml(*elem.as_array());
                     log_history.push_back(obj);
+                }
+            }
+            if (auto *cmd_array = tbl["command_history"].as_array())
+            {
+                for (const auto &elem : *cmd_array)
+                {
+                    if (!elem.is_string())
+                        continue;
+                    command_history.push_back(elem.value<std::string>().value_or(""));
                 }
             }
         }
@@ -121,21 +106,9 @@ namespace Ramsey
             toml::array log_array;
             for (size_t i = 1; i < log_history.size(); ++i)
             {
-                auto &log = log_history[i];
-
-                // log_entry.insert("logstring", log.myString);
-                toml::array color_array;
-                color_array.push_back(log.myString);
-                color_array.push_back(log.color.x);
-                color_array.push_back(log.color.y);
-                color_array.push_back(log.color.z);
-                color_array.push_back(log.color.w);
-
-                log_array.push_back(color_array);
+                log_array.push_back(log_history[i].saveToml());
             }
             tbl.insert("log_history", log_array);
-            // std::cout << toml::json_formatter(tbl) << std::endl;
-            std::cout << tbl << std::endl;
         }
 
         static std::string formatString(const char *fstring, ...)
@@ -202,22 +175,22 @@ namespace Ramsey
 
         void DebugLog(const char *environment_desc, const char *fstring, va_list args_list = nullptr)
         {
-            addLogHistory({0.0f, 0.9f, 0.0f, 1.0f}, environment_desc, "  DEBUG: ", fstring, args_list);
+            addLogHistory(gameSettings.consoleSettings.DebugColor, environment_desc, "  DEBUG: ", fstring, args_list);
         }
 
         void WarningLog(const char *environment_desc, const char *fstring, va_list args_list = nullptr)
         {
-            addLogHistory({1.0f, 1.0f, 0.0f, 1.0f}, environment_desc, "WARNING: ", fstring, args_list);
+            addLogHistory(gameSettings.consoleSettings.WarningColor, environment_desc, "WARNING: ", fstring, args_list);
         }
 
         void ErrorLog(const char *environment_desc, const char *fstring, va_list args_list = nullptr)
         {
-            addLogHistory({1.0f, 0.0f, 0.0f, 1.0f}, environment_desc, "  ERROR: ", fstring, args_list);
+            addLogHistory(gameSettings.consoleSettings.ErrorColor, environment_desc, "  ERROR: ", fstring, args_list);
         }
 
         void Log(const char *environment_desc, const char *fstring, va_list args_list = nullptr)
         {
-            addLogHistory({1.0f, 1.0f, 1.0f, 1.0f}, environment_desc, "    LOG: ", fstring, args_list);
+            addLogHistory(gameSettings.consoleSettings.LogColor, environment_desc, "    LOG: ", fstring, args_list);
         }
 
         int executeCommand(std::string s)
@@ -267,27 +240,33 @@ namespace Ramsey
                     log_history.push_back(ColorString("[" + std::to_string(i) + "] " + command_history[i], {0.8f, 0.8f, 0.8f, 1.0f}));
                 }
             }
-            else if (s == "save")
+            else if (s.substr(0, 4) == "save")
             {
                 pushNoRepeat(s, command_history);
+                std::string filename = "log.toml";
+                if (s.size() > 5)
+                {
+                    filename = s.substr(5);
+                }
+
                 toml::table tbl;
                 saveToml(tbl);
-                // cereal::JSONOutputArchive oarchive(std::cout);
-                // oarchive(cereal::make_nvp("console", *this));
+                std::ofstream ofs(filename);
+                ofs << tbl; // put that toml right on out
+
+                ofs.close();
             }
-            else if (s == "load")
+            else if (s.substr(0, 4) == "load")
             {
                 pushNoRepeat(s, command_history);
-                // std::ifstream fstream("t.json");
-                // if (!fstream.is_open())
-                // {
-                //     ErrorLog("load", "could not open t.json for reading");
-                //     return 0;
-                // }
-                auto tbl = toml::parse_file("t.toml");
+                std::string filename = "log.toml";
+                if (s.size() > 5)
+                {
+                    filename = s.substr(5);
+                }
+
+                auto tbl = toml::parse_file(filename);
                 loadToml(tbl);
-                // cereal::JSONInputArchive iarchive(fstream);
-                // iarchive(cereal::make_nvp("console", *this));
             }
             else
             {
@@ -356,8 +335,7 @@ namespace Ramsey
             ImGui::SetNextWindowSize(size, ImGuiCond_Always);
             ImGui::SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.0, 1.0f));
 
-            float grey_value = 0.2f;
-            ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(grey_value, grey_value, grey_value, 0.9f));
+            ImGui::PushStyleColor(ImGuiCol_WindowBg, gameSettings.consoleSettings.MainConsoleBgColor);
             const static ImGuiWindowFlags winFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings;
 
             const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();

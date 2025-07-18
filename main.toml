@@ -1,0 +1,6 @@
+[Console]
+WarningColor = [1.0, 1.0, 0.0, 1.0]
+ErrorColor = [1.0, 0.0, 0.0, 1.0]
+LogColor = [1.0, 1.0, 1.0, 1.0]
+DebugColor = [0.2, 1.0, 1.0, 1.0]
+MainConsoleBgColor = [0.2, 0.2, 0.2, 1.0]

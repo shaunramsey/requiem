@@ -27,11 +27,13 @@
 // #include "imstb_truetype.h"
 
 #include "Console.h"
+#include "GameSettings.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
+GameSettings gameSettings;
 
 const std::vector<const char *> validationLayers = {
     "VK_LAYER_KHRONOS_validation"};
@@ -160,7 +162,7 @@ class HelloRayMarchSphereApplication
 public:
     void run()
     {
-        initFileLoad();
+        initSettings();
         initWindow();
         initVulkan();
         initImGui(); // imguiinit call
@@ -234,8 +236,9 @@ private:
 
     bool framebufferResized = false;
 
-    void initFileLoad()
+    void initSettings()
     {
+        gameSettings.loadDefaults();
         // Load uniform data from file
         std::ifstream file("build_number.txt");
         if (file.is_open())

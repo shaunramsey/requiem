@@ -9,7 +9,7 @@ IMGUI_OBJS = "build\imgui.obj" "build\imgui_demo.obj" "build\imgui_draw.obj" "bu
 
 TARGET = main.exe
 SOURCES = main.cpp 
-HEADERS = Console.h
+HEADERS = Console.h GameSEttings.h utils.h
 SHADERS = build/fragShader.spv build/vertShader.spv
 
 INCLUDES = /I"C:\VulkanSDK\glfw-3.4.bin.WIN64\include" /I"C:\VulkanSDK\1.4.309.0\Include" /I"C:\VulkanSDK\imgui" /I"C:\VulkanSDK\imgui\backends" /I"C:\VulkanSDK\cereal-1.3.2\include" /I"C:\VulkanSDK\tomlplusplus\include"
