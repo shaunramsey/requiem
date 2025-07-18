@@ -177,7 +177,8 @@ private:
     bool _hide_all_gui = false;
     bool _show_about = false;
     bool _show_stats = true;
-    bool _show_console = true;
+    bool _show_console = false;
+    bool _show_game_settings = false;
 
     GLFWwindow *window;
 
@@ -381,6 +382,55 @@ private:
         _console.draw(&_show_console);
     }
 
+    void drawGameSettingsWindow()
+    {
+        const ImGuiViewport *viewport = ImGui::GetMainViewport();
+        ImVec2 work_pos = viewport->WorkPos; // Use work area to avoid menu-bar/task-bar, if any!
+        ImVec2 work_size = viewport->WorkSize;
+        static ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize;
+        ImGui::SetNextWindowPos(work_pos, ImGuiCond_Always);
+        ImGui::SetNextWindowSize(work_size, ImGuiCond_Always);
+        if (!ImGui::Begin("Game Settings", &_show_game_settings, window_flags))
+        {
+            ImGui::End();
+            return;
+        }
+        ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
+        if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
+        {
+            if (ImGui::BeginTabItem("Settings"))
+            {
+                ImGui::Text("This is the Main Settings tab!");
+                if (ImGui::Button("Close Settings"))
+                {
+                    _show_game_settings = false;
+                }
+                if (ImGui::Button("Quit - Close Application"))
+                {
+                    glfwSetWindowShouldClose(window, GLFW_TRUE);
+                }
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Display"))
+            {
+                ImGui::Text("This is the Display tab!");
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("KeyBinds"))
+            {
+                ImGui::Text("This is the KeyBinds tab!");
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Console"))
+            {
+                ImGui::Text("This is the Console tab!");
+                ImGui::EndTabItem();
+            }
+            ImGui::EndTabBar();
+        }
+        ImGui::End();
+    }
+
     void drawImGui(float dt)
     {
         ImGui_ImplVulkan_NewFrame();
@@ -398,19 +448,27 @@ private:
         {
             if (ImGui::BeginMenu("File"))
             {
+                if (ImGui::MenuItem("Settings", gameSettings.keyBindSettings.toggleSettingsKeyName.c_str()))
+                {
+                    _show_game_settings = !_show_game_settings;
+                }
                 if (ImGui::MenuItem("Exit", "ALT+F4")) // , "ALT+F4"
                     glfwSetWindowShouldClose(window, GLFW_TRUE);
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Binds"))
             {
-                if (ImGui::MenuItem("Toggle GUI", "F2"))
+                if (ImGui::MenuItem("Toggle GUI", gameSettings.keyBindSettings.toggleUiKeyName.c_str()))
                 {
                     _hide_all_gui = !_hide_all_gui;
                 }
-                if (ImGui::MenuItem("Toggle Stats", "F3"))
+                if (ImGui::MenuItem("Toggle Stats", gameSettings.keyBindSettings.toggleStatsKeyName.c_str()))
                 {
                     _show_stats = !_show_stats;
+                }
+                if (ImGui::MenuItem("Toggle Console", gameSettings.keyBindSettings.toggleConsoleKeyName.c_str()))
+                {
+                    _show_console = !_show_console;
                 }
                 // ImGui::Separator();
                 if (ImGui::MenuItem("Quit", "ALT+F4"))
@@ -423,7 +481,7 @@ private:
                 {
                     _show_about = !_show_about;
                 }
-                if (ImGui::MenuItem("Show Stats", "F3"))
+                if (ImGui::MenuItem("Show Stats", gameSettings.keyBindSettings.toggleStatsKeyName.c_str()))
                 {
                     _show_stats = !_show_stats;
                 }
@@ -450,6 +508,9 @@ private:
             drawConsole();
             ImGui::SetWindowFocus("Console");
         }
+
+        if (_show_game_settings)
+            drawGameSettingsWindow();
 
         ImGui::Render();
     }
@@ -484,15 +545,15 @@ private:
 
     void processImGuiEvents()
     {
-        if (ImGui::IsKeyPressed(ImGuiKey_F2))
+        if (ImGui::IsKeyPressed(gameSettings.keyBindSettings.toggleUiKey))
         {
             _hide_all_gui = !_hide_all_gui;
         }
-        if (ImGui::IsKeyPressed(ImGuiKey_F3))
+        if (ImGui::IsKeyPressed(gameSettings.keyBindSettings.toggleStatsKey))
         {
             _show_stats = !_show_stats;
         }
-        if (ImGui::IsKeyPressed(ImGuiKey_Backslash) || ImGui::IsKeyPressed(ImGuiKey_GraveAccent))
+        if (ImGui::IsKeyPressed(ImGuiKey_Backslash) || ImGui::IsKeyPressed(gameSettings.keyBindSettings.toggleConsoleKey))
         {
             _show_console = !_show_console;
         }
@@ -502,6 +563,10 @@ private:
             _console.WarningLog("F1", "Test #2", nullptr);
             _console.ErrorLog("F1", "Test #3", nullptr);
             _console.DebugLog("F1", "Test #4", nullptr);
+        }
+        if (ImGui::IsKeyPressed(gameSettings.keyBindSettings.toggleSettingsKey))
+        {
+            _show_game_settings = !_show_game_settings;
         }
     }
 
@@ -525,6 +590,7 @@ private:
             lastTime = currentTime;
             currentTime = std::chrono::high_resolution_clock::now();
             float dt = std::chrono::duration<float, std::chrono::milliseconds::period>(currentTime - lastTime).count();
+
             drawImGui(dt);
             // Poll and handle events (inputs, window resize, etc.)
             // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
