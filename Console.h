@@ -2,13 +2,16 @@
 // console.h
 #include "imgui.h"
 
+#include <fstream>
 #include <vector>
 #include <string>
 #include <algorithm>
 #include <cstdarg>
 #include <cereal/archives/json.hpp>
+#include <cereal/archives/xml.hpp>
 #include <cereal/types/vector.hpp>
 #include <cereal/types/string.hpp>
+#include <toml++/toml.hpp>
 
 namespace Ramsey
 {
@@ -16,17 +19,45 @@ namespace Ramsey
     class ColorString
     {
     public:
-        ColorString(std::string s, ImVec4 v = {1.0, 1.0, 1.0, 1.0})
+        ColorString(std::string s = "", ImVec4 v = {1.0, 1.0, 1.0, 1.0})
         {
             myString = s;
             color = v;
         }
         std::string myString;
         ImVec4 color;
-         template <class Archive>
-        void serialize(Archive &archive)
+
+        // template <class Archive>
+        // std::string save_minimal(Archive &archive) const
+        // {
+        //     std::string s = myString + " color: " + std::to_string(color.x) + " " + std::to_string(color.y) + " " + std::to_string(color.z) + " " + std::to_string(color.w);
+        //     return s;
+        // }
+
+        // template <class Archive>
+        // void load_minimal(Archive &archive, const std::string &s)
+        // {
+        //     size_t pos = s.find(" color: ");
+        //     myString = s.substr(0, pos);
+        //     std::cout << "loaded string: " << myString << std::endl;
+        //     std::string color_string = s.substr(pos + 8);
+        //     std::cout << "loaded color string: " << color_string << std::endl;
+        //     sscanf(color_string.c_str(), "%f %f %f %f", &color.x, &color.y, &color.z, &color.w);
+        //     std::cout << "loaded color: " << color.x << " " << color.y << " " << color.z << " " << color.w << std::endl;
+        // }
+        template <class Archive>
+        void save(Archive &archive) const
         {
-            archive(cereal::make_nvp("logstring", myString), CEREAL_NVP(color.x), CEREAL_NVP(color.y), CEREAL_NVP(color.z), CEREAL_NVP(color.w));
+            std::vector<float> vcolor = {color.x, color.y, color.z, color.w};
+            archive(cereal::make_nvp("logstring", myString), CEREAL_NVP(vcolor));
+        }
+
+        template <class Archive>
+        void load(Archive &archive)
+        {
+            std::vector<float> vcolor;
+            archive(cereal::make_nvp("logstring", myString), CEREAL_NVP(vcolor));
+            color = ImVec4(vcolor[0], vcolor[1], vcolor[2], vcolor[3]);
         }
     };
 
@@ -52,6 +83,59 @@ namespace Ramsey
         void serialize(Archive &archive)
         {
             archive(CEREAL_NVP(command_history), CEREAL_NVP(log_history));
+        }
+
+        void loadToml(toml::table &tbl)
+        {
+            if (auto *cs_array = tbl["log_history"].as_array())
+            {
+                for (const auto &elem : *cs_array)
+                {
+                    std::cout << " got here 2" << std::endl;
+                    if (!elem.is_array())
+                        continue;
+                    const auto &tab = *elem.as_array();
+
+                    ColorString obj;
+                    obj.myString = tab[0].value<std::string>().value_or("");
+                    obj.color.x = tab[1].value<float>().value_or(1.0f);
+                    obj.color.y = tab[2].value<float>().value_or(1.0f);
+                    obj.color.z = tab[3].value<float>().value_or(1.0f);
+                    obj.color.w = tab[4].value<float>().value_or(1.0f);
+
+                    log_history.push_back(obj);
+                }
+            }
+        }
+        // toml::value -- values
+        // toml::array -- arrays
+        // toml::table -- tables
+        void saveToml(toml::table &tbl)
+        {
+            toml::array command_array;
+            for (size_t i = 1; i < command_history.size(); ++i)
+            {
+                command_array.push_back(command_history[i]);
+            }
+            tbl.insert("command_history", command_array);
+            toml::array log_array;
+            for (size_t i = 1; i < log_history.size(); ++i)
+            {
+                auto &log = log_history[i];
+
+                // log_entry.insert("logstring", log.myString);
+                toml::array color_array;
+                color_array.push_back(log.myString);
+                color_array.push_back(log.color.x);
+                color_array.push_back(log.color.y);
+                color_array.push_back(log.color.z);
+                color_array.push_back(log.color.w);
+
+                log_array.push_back(color_array);
+            }
+            tbl.insert("log_history", log_array);
+            // std::cout << toml::json_formatter(tbl) << std::endl;
+            std::cout << tbl << std::endl;
         }
 
         static std::string formatString(const char *fstring, ...)
@@ -186,8 +270,24 @@ namespace Ramsey
             else if (s == "save")
             {
                 pushNoRepeat(s, command_history);
-                cereal::JSONOutputArchive oarchive(std::cout);
-                oarchive(*this);
+                toml::table tbl;
+                saveToml(tbl);
+                // cereal::JSONOutputArchive oarchive(std::cout);
+                // oarchive(cereal::make_nvp("console", *this));
+            }
+            else if (s == "load")
+            {
+                pushNoRepeat(s, command_history);
+                // std::ifstream fstream("t.json");
+                // if (!fstream.is_open())
+                // {
+                //     ErrorLog("load", "could not open t.json for reading");
+                //     return 0;
+                // }
+                auto tbl = toml::parse_file("t.toml");
+                loadToml(tbl);
+                // cereal::JSONInputArchive iarchive(fstream);
+                // iarchive(cereal::make_nvp("console", *this));
             }
             else
             {
@@ -327,5 +427,4 @@ namespace Ramsey
             ImGui::End();
         }
     };
-
 }

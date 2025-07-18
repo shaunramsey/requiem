@@ -217,7 +217,7 @@ void main() {
     vec3 ro = data.camera; //0,0,-3
     vec3 rd = normalize(vec3(st, 1));
     
-    const int num_samples = 100; //300, 100, 30
+    const int num_samples = 1; //300, 100, 30
     vec4 newColor = vec4(0.0);
     for(int i = 0; i < num_samples; i++){
         newColor += ray_march(ro+vec3(float(i)*0.05/float(num_samples), 0.0, 0.0), rd);
