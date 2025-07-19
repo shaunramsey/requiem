@@ -6,7 +6,7 @@ DebugColor = [0.2, 1.0, 1.0, 1.0]
 MainConsoleBgColor = [0.2, 0.2, 0.2, 1.0]
 
 [Display]
-Size = [800, 800]
+Size = [1000, 800]
 Pos = [40, 40]
 
 [KeyBindings]
