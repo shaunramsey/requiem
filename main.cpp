@@ -414,16 +414,19 @@ private:
             if (ImGui::BeginTabItem("Display"))
             {
                 ImGui::Text("This is the Display tab!");
+                // gameSettings.displaySettings.drawImGui();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("KeyBinds"))
             {
                 ImGui::Text("This is the KeyBinds tab!");
+                gameSettings.keyBindSettings.drawImGui();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Console"))
             {
                 ImGui::Text("This is the Console tab!");
+                gameSettings.consoleSettings.drawImGui();
                 ImGui::EndTabItem();
             }
             ImGui::EndTabBar();
