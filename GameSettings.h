@@ -5,6 +5,7 @@
 #include <toml++/toml.hpp>
 #include "imgui.h"
 #include "utils.h"
+#include "Helper.h"
 
 std::map<std::string, ImGuiKey> ImGuiKeyMap = {
     {"Tab", ImGuiKey_Tab},
@@ -159,6 +160,7 @@ public:
     ConsoleSettings()
     {
     }
+
     void loadToml(toml::table &tbl)
     {
         toml::table table = *tbl["Console"].as_table();
@@ -179,31 +181,16 @@ public:
         static ImGuiColorEditFlags base_flags = ImGuiColorEditFlags_None;
         if (ImGui::BeginTable("table_columns_flags_checkboxes", 2, ImGuiTableFlags_None))
         {
-            ImGui::TableNextColumn();
-            ImGui::Text("Warning Color");
-            ImGui::TableNextColumn();
-            ImGui::ColorEdit4("Warning Color", (float *)&WarningColor, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | base_flags);
-            ImGui::TableNextColumn();
-            ImGui::Text("Error Color");
-            ImGui::TableNextColumn();
-            ImGui::ColorEdit4("Error Color", (float *)&ErrorColor, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | base_flags);
-            ImGui::TableNextColumn();
-            ImGui::Text("Log Color");
-            ImGui::TableNextColumn();
-            ImGui::ColorEdit4("Log Color", (float *)&LogColor, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | base_flags);
-            ImGui::TableNextColumn();
-            ImGui::Text("Debug Color");
-            ImGui::TableNextColumn();
-            ImGui::ColorEdit4("Debug Color", (float *)&DebugColor, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | base_flags);
-            ImGui::TableNextColumn();
-            ImGui::Text("Main Console Background Color");
-            ImGui::TableNextColumn();
-            ImGui::ColorEdit4("Main Console Background Color", (float *)&MainConsoleBgColor, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | base_flags);
+            Helper::Color2Column("Warning Color", WarningColor, base_flags);
+            Helper::Color2Column("Error Color", ErrorColor, base_flags);
+            Helper::Color2Column("Log Color", LogColor, base_flags);
+            Helper::Color2Column("Debug Color", DebugColor, base_flags);
+            Helper::Color2Column("Main Console Background Color", MainConsoleBgColor, base_flags);
             ImGui::EndTable();
         }
     }
 
-    ImVec4 WarningColor = ImVec4(1.0f, 0.0f, 1.0f, 1.0f);
+    ImVec4 WarningColor = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
     ImVec4 ErrorColor = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
     ImVec4 LogColor = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
     ImVec4 DebugColor = ImVec4(0.0f, 1.0f, 1.0f, 1.0f);
