@@ -10,13 +10,13 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Send Discord notification
-        uses: rjstone/discord-webhook-notify@v1 # or v2 for latest features
+        uses: rjstone/discord-webhook-notify@v2 # or v2 for latest features
         with:
           webhookUrl: ${{ secrets.DISCORD_WEBHOOK_SECRET_FOR_COMMITS_TO_DISCORD_MSGS }}
           username: ${{ github.event.head_commit.author.name  }}
+          avatarUrl: http://shaunramsey.com/whitesquared.png
           text: |
-            New commit in ${{ github.repository }} by ${{ github.event.head_commit.author.name }}:
-            >>>
+            New commit in `${{ github.repository }}` by `${{ github.event.head_commit.author.name }}`:
             ```
              ${{ github.event.head_commit.message }}
             ```
