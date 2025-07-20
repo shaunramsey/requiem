@@ -34,6 +34,7 @@ const uint32_t HEIGHT = 600;
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 GameSettings gameSettings;
+GameSettings modifiableGameSettings; // a copy of game settings for use in the game settings display window
 
 const std::vector<const char *> validationLayers = {
     "VK_LAYER_KHRONOS_validation"};
@@ -382,18 +383,46 @@ private:
         _console.draw(&_show_console);
     }
 
-    void drawGameSettingsWindow()
+    void toggleGameSettingsWindow()
+    {
+        _show_game_settings = !_show_game_settings;
+        if (_show_game_settings)
+        { // then make a copy of the current game settings for use in game settings display
+            modifiableGameSettings = gameSettings;
+        }
+    }
+    void drawGameSettingsWindow(GameSettings &gs)
     {
         const ImGuiViewport *viewport = ImGui::GetMainViewport();
         ImVec2 work_pos = viewport->WorkPos; // Use work area to avoid menu-bar/task-bar, if any!
         ImVec2 work_size = viewport->WorkSize;
-        static ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize;
+        static ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize;
         ImGui::SetNextWindowPos(work_pos, ImGuiCond_Always);
         ImGui::SetNextWindowSize(work_size, ImGuiCond_Always);
         if (!ImGui::Begin("Game Settings", &_show_game_settings, window_flags))
         {
             ImGui::End();
             return;
+        }
+        if (ImGui::BeginMenuBar())
+        {
+            if (ImGui::BeginMenu("Apply"))
+            {
+                gameSettings = modifiableGameSettings;
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("| Quit without Applying"))
+            {
+                toggleGameSettingsWindow();
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("| Restore and Apply Defaults"))
+            {
+                gameSettings = GameSettings();
+                toggleGameSettingsWindow(); // this will copy the default settings into the modifiable settings
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenuBar();
         }
         ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
         if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
@@ -414,19 +443,19 @@ private:
             if (ImGui::BeginTabItem("Display"))
             {
                 ImGui::Text("This is the Display tab!");
-                // gameSettings.displaySettings.drawImGui();
+                // gs.displaySettings.drawImGui();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("KeyBinds"))
             {
                 ImGui::Text("This is the KeyBinds tab!");
-                gameSettings.keyBindSettings.drawImGui();
+                gs.keyBindSettings.drawImGui();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Console"))
             {
                 ImGui::Text("This is the Console tab!");
-                gameSettings.consoleSettings.drawImGui();
+                gs.consoleSettings.drawImGui();
                 ImGui::EndTabItem();
             }
             ImGui::EndTabBar();
@@ -453,7 +482,7 @@ private:
             {
                 if (ImGui::MenuItem("Settings", gameSettings.keyBindSettings.toggleSettingsKeyName.c_str()))
                 {
-                    _show_game_settings = !_show_game_settings;
+                    toggleGameSettingsWindow();
                 }
                 if (ImGui::MenuItem("Exit", "ALT+F4")) // , "ALT+F4"
                     glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -513,7 +542,7 @@ private:
         }
 
         if (_show_game_settings)
-            drawGameSettingsWindow();
+            drawGameSettingsWindow(modifiableGameSettings);
 
         ImGui::Render();
     }
@@ -569,7 +598,7 @@ private:
         }
         if (ImGui::IsKeyPressed(gameSettings.keyBindSettings.toggleSettingsKey))
         {
-            _show_game_settings = !_show_game_settings;
+            toggleGameSettingsWindow();
         }
     }
 
