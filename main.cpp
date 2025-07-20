@@ -25,9 +25,7 @@
 // #include "imstb_rectpack.h"
 // #include "imstb_textedit.h"
 // #include "imstb_truetype.h"
-
-#include "Console.h"
-#include "GameSettings.h"
+#include "utils.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -35,6 +33,7 @@ const uint32_t HEIGHT = 600;
 const int MAX_FRAMES_IN_FLIGHT = 2;
 GameSettings gameSettings;
 GameSettings modifiableGameSettings; // a copy of game settings for use in the game settings display window
+Ramsey::Console _console;
 
 const std::vector<const char *> validationLayers = {
     "VK_LAYER_KHRONOS_validation"};
@@ -234,8 +233,6 @@ private:
 
     uint64_t frameCount = 0;
 
-    Ramsey::Console _console;
-
     bool framebufferResized = false;
 
     void initSettings()
@@ -396,7 +393,7 @@ private:
         const ImGuiViewport *viewport = ImGui::GetMainViewport();
         ImVec2 work_pos = viewport->WorkPos; // Use work area to avoid menu-bar/task-bar, if any!
         ImVec2 work_size = viewport->WorkSize;
-        static ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize;
+        static ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize;
         ImGui::SetNextWindowPos(work_pos, ImGuiCond_Always);
         ImGui::SetNextWindowSize(work_size, ImGuiCond_Always);
         if (!ImGui::Begin("Game Settings", &_show_game_settings, window_flags))
@@ -404,26 +401,28 @@ private:
             ImGui::End();
             return;
         }
-        if (ImGui::BeginMenuBar())
+        // button bar
         {
-            if (ImGui::BeginMenu("Apply"))
+            if (ImGui::Button("Apply"))
             {
                 gameSettings = modifiableGameSettings;
-                ImGui::EndMenu();
+                gameSettings.saveChanges(); // save the modified settings to main.toml
+                toggleGameSettingsWindow(); // close the window
             }
-            if (ImGui::BeginMenu("| Quit without Applying"))
+            ImGui::SameLine();
+            if (ImGui::Button("Quit without Applying"))
             {
                 toggleGameSettingsWindow();
-                ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu("| Restore and Apply Defaults"))
+            ImGui::SameLine();
+            if (ImGui::Button("Restore and Apply Defaults"))
             {
                 gameSettings = GameSettings();
-                toggleGameSettingsWindow(); // this will copy the default settings into the modifiable settings
-                ImGui::EndMenu();
+                gameSettings.saveChanges(); // save the default settings to main.toml
+                toggleGameSettingsWindow(); // close the window
             }
-            ImGui::EndMenuBar();
         }
+        ImGui::Text("Which settings would you like to change?");
         ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
         if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
         {
@@ -668,7 +667,7 @@ private:
 
     void cleanup()
     {
-        std::cout << "Performing Cleanup" << std::endl;
+        std::cout << "[*] Performing Cleanup" << std::endl;
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
@@ -720,7 +719,7 @@ private:
 
     void initImGui() // imguiinit
     {
-        std::cout << "Initializing Dear ImGui" << std::endl;
+        std::cout << "[*] Initializing Dear ImGui" << std::endl;
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         // ImGuiIO &io = ImGui::GetIO();
@@ -1954,7 +1953,7 @@ private:
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData)
     {
         std::string datanull = pUserData == NULL ? "yes" : "no";
-        std::cerr << "validation layer: " << pCallbackData->pMessage;
+        std::cerr << "  [*] Validation layer: " << pCallbackData->pMessage;
         std::cerr << " Type: " << messageType << " Severity:" << messageSeverity << " userdatanull?:" << datanull << std::endl;
         return VK_FALSE;
     }

@@ -8,7 +8,11 @@
 #include <algorithm>
 #include <cstdarg>
 #include <toml++/toml.hpp>
+#include <chrono>
 #include "utils.h"
+#include "GameSettings.h"
+
+extern GameSettings gameSettings;
 
 namespace Ramsey
 {
