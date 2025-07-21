@@ -204,9 +204,9 @@ namespace Helper
             {
                 ImGui::Text("\"%s\"", ImGui::GetKeyName(lastKeyPress));
             }
-
-            // ImVec2 window_pos = ImGui::GetWindowPos();
-            // ImGui::Text("%f %f", io.MousePos.x - window_pos.x, io.MousePos.y - window_pos.y);
+            // debug for positions and super keys
+            //  ImVec2 window_pos = ImGui::GetWindowPos();
+            //  ImGui::Text("%f %f", io.MousePos.x - window_pos.x, io.MousePos.y - window_pos.y);
 
             // ImGui::Text("Keys mods: %s%s%s%s", io.KeyCtrl ? "CTRL " : "", io.KeyShift ? "SHIFT " : "", io.KeyAlt ? "ALT " : "", io.KeySuper ? "SUPER " : "");
 
