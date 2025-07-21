@@ -25,7 +25,9 @@
 // #include "imstb_rectpack.h"
 // #include "imstb_textedit.h"
 // #include "imstb_truetype.h"
-#include "utils.h"
+#include "Console.h" //includes
+#include "GameSettings.h"
+#include "externs.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -576,7 +578,15 @@ private:
 
     void processImGuiEvents()
     {
-        if (ImGui::GetIO().WantCaptureKeyboard) return;
+
+        //    if (ImGui::GetIO().WantCaptureKeyboard)
+        //     return;
+        if (ImGui::IsKeyPressed(ImGuiKey_Backslash) || ImGui::IsKeyPressed(gameSettings.keyBindSettings.toggleConsoleKey))
+        {
+            _show_console = !_show_console;
+        }
+
+     
         if (ImGui::IsKeyPressed(gameSettings.keyBindSettings.toggleUiKey))
         {
             _hide_all_gui = !_hide_all_gui;
@@ -585,10 +595,7 @@ private:
         {
             _show_stats = !_show_stats;
         }
-        if (ImGui::IsKeyPressed(ImGuiKey_Backslash) || ImGui::IsKeyPressed(gameSettings.keyBindSettings.toggleConsoleKey))
-        {
-            _show_console = !_show_console;
-        }
+
         if (ImGui::IsKeyPressed(ImGuiKey_F1))
         {
             _console.Log("F1", "Test #1", nullptr);
