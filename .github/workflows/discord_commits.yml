@@ -18,8 +18,9 @@ jobs:
           text: |
 
             ${{ github.event.head_commit.author.name }} posted a new commit in `${{ github.repository }}`:
-            >>>```
-            > ${{ github.event.head_commit.message }}```
+            >>> ``` -[View Commit](${{ github.event.head_commit.url }})
+            ${{ github.event.head_commit.message }}
+            ```
           flags: SuppressNotifications
           # severity: info
           # footer: New commit in ${{ github.repository }}
