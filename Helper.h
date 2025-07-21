@@ -155,13 +155,13 @@ namespace Helper
         ImGui::ColorEdit3(label, (float *)&color, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoLabel | flags);
     }
 
-    void KeyBind(const char *name, ImGuiKey &key, ImGuiKey default_key)
+    void KeyBind(const char *name, ImGuiKey &in_key, ImGuiKey default_key)
     {
         ImGui::TableNextColumn();
         ImGui::Text("%s:", name);
         ImGui::TableNextColumn();
         std::string buttonName = "Current Key: [";
-        buttonName += ImGui::GetKeyName(key);
+        buttonName += ImGui::GetKeyName(in_key);
         buttonName += "]##" + std::string(name);
         std::string popupName = buttonName + "popup";
         if (ImGui::Button(buttonName.c_str()))
@@ -172,18 +172,55 @@ namespace Helper
 
         if (ImGui::BeginPopup(popupName.c_str()))
         {
+            static ImGuiKey lastKeyPress = in_key;
             ImGui::Text("You are here to change the keybind for %s", name);
+
             ImGui::Separator();
-            ImGui::Text("Current Keybind: %s", ImGui::GetKeyName(key));
+            ImGui::Text("Current Keybind: %s", ImGui::GetKeyName(in_key));
             ImGui::Text("Default Keybind: %s", ImGui::GetKeyName(default_key));
-            ImGui::Text("Hold down the keys you want to bind and click Accept.");
+            ImGuiIO &io = ImGui::GetIO();
+            bool enable = io.MousePos.y - ImGui::GetWindowPos().y < 120.0f;
+            if (enable)
+            {
+                ImGui::TextDisabled("Key Is Set - Move mouse here to enable key capture");
+            }
+            ImGui::Text("Keys down:");
+            ImGui::SameLine();
+
+            if (enable)
+            {
+
+                for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
+                {
+                    if (!ImGui::IsKeyDown(key))
+                        continue;
+                    // if (key < ImGuiKey_MouseLeft)
+                    lastKeyPress = key;
+                    // ImGui::Text("\"%s\"", ImGui::GetKeyName(key));
+                }
+                ImGui::Text("\"%s\"", ImGui::GetKeyName(lastKeyPress));
+            }
+            else
+            {
+                ImGui::Text("\"%s\"", ImGui::GetKeyName(lastKeyPress));
+            }
+
+            // ImVec2 window_pos = ImGui::GetWindowPos();
+            // ImGui::Text("%f %f", io.MousePos.x - window_pos.x, io.MousePos.y - window_pos.y);
+
+            // ImGui::Text("Keys mods: %s%s%s%s", io.KeyCtrl ? "CTRL " : "", io.KeyShift ? "SHIFT " : "", io.KeyAlt ? "ALT " : "", io.KeySuper ? "SUPER " : "");
+
+            ImGui::Separator();
             if (ImGui::Button("Accept and Close"))
             {
+                in_key = lastKeyPress;
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
             if (ImGui::Button("Cancel and Close"))
+            {
                 ImGui::CloseCurrentPopup();
+            }
             ImGui::EndPopup();
         }
     }
