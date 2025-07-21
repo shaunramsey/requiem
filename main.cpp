@@ -576,6 +576,7 @@ private:
 
     void processImGuiEvents()
     {
+        if (ImGui::GetIO().WantCaptureKeyboard) return;
         if (ImGui::IsKeyPressed(gameSettings.keyBindSettings.toggleUiKey))
         {
             _hide_all_gui = !_hide_all_gui;

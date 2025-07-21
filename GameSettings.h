@@ -28,6 +28,11 @@ public:
 
     void loadToml(toml::table &tbl)
     {
+        if (tbl["Console"].as_table() == nullptr)
+        {
+            std::cout << "  [-] No console settings found in toml, using defaults" << std::endl;
+            return;
+        }
         toml::table table = *tbl["Console"].as_table();
         std::cout << "  [-] Loading console settings from toml" << std::endl;
         Helper::loadTomlColor(table, "WarningColor", WarningColor);
@@ -73,19 +78,19 @@ public:
     {
         toml::table table = *tbl["KeyBindings"].as_table();
         std::cout << "  [-] Loading key bindings from toml" << std::endl;
-        Helper::loadTomlKeybind(table, "ToggleUiKey", "F2", toggleUiKey, toggleUiKeyName);
-        Helper::loadTomlKeybind(table, "ToggleStatsKey", "F3", toggleStatsKey, toggleStatsKeyName);
-        Helper::loadTomlKeybind(table, "ToggleConsoleKey", "GraveAccent", toggleConsoleKey, toggleConsoleKeyName);
-        Helper::loadTomlKeybind(table, "ToggleSettingsKey", "Escape", toggleSettingsKey, toggleSettingsKeyName);
+        Helper::loadTomlKeybind(table, "ToggleUiKey", "F2", toggleUiKey);
+        Helper::loadTomlKeybind(table, "ToggleStatsKey", "F3", toggleStatsKey);
+        Helper::loadTomlKeybind(table, "ToggleConsoleKey", "GraveAccent", toggleConsoleKey);
+        Helper::loadTomlKeybind(table, "ToggleSettingsKey", "Escape", toggleSettingsKey);
     }
     void saveToml(toml::table &tbl)
     {
         toml::table table;
         std::cout << "  [-] Saving key bindings to toml" << std::endl;
-        table.insert("ToggleUiKey", toggleUiKeyName);
-        table.insert("ToggleStatsKey", toggleStatsKeyName);
-        table.insert("ToggleConsoleKey", toggleConsoleKeyName);
-        table.insert("ToggleSettingsKey", toggleSettingsKeyName);
+        table.insert("ToggleUiKey", ImGui::GetKeyName(toggleUiKey));
+        table.insert("ToggleStatsKey", ImGui::GetKeyName(toggleStatsKey));
+        table.insert("ToggleConsoleKey", ImGui::GetKeyName(toggleConsoleKey));
+        table.insert("ToggleSettingsKey", ImGui::GetKeyName(toggleSettingsKey));
         tbl.insert("KeyBindings", table);
     }
     void drawImGui()
@@ -95,29 +100,22 @@ public:
         ImGui::Text("(be sure to save - restart may be required to take effect)");
         if (ImGui::BeginTable("table_columns_flags_checkboxes", 2, ImGuiTableFlags_None))
         {
-            PushStyleCompact();
-            ImGui::TableNextColumn();
-            ImGui::Text("Toggle UI Key:");
-            ImGui::TableNextColumn();
-            ImGui::Text("%s", toggleUiKeyName.c_str());
+            // PushStyleCompact();
 
-            ImGui::TableNextColumn();
-            ImGui::Text("Toggle Stats Key:");
-            ImGui::TableNextColumn();
-            ImGui::Text("%s", toggleStatsKeyName.c_str());
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f, 12.0f));
+            ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
 
-            ImGui::TableNextColumn();
-            ImGui::Text("Toggle Console Key:");
-            ImGui::TableNextColumn();
-            ImGui::Text("%s", toggleConsoleKeyName.c_str());
+         
 
-            ImGui::TableNextColumn();
-            ImGui::Text("Toggle Settings Key:");
-            ImGui::TableNextColumn();
-            ImGui::Text("%s", toggleSettingsKeyName.c_str());
+            Helper::KeyBind("Toggle UI Key", toggleUiKey, ImGuiKey_F2);
+            Helper::KeyBind("Toggle Stats Key", toggleStatsKey, ImGuiKey_F3);
+            Helper::KeyBind("Toggle Console Key", toggleConsoleKey, ImGuiKey_GraveAccent);
+            Helper::KeyBind("Toggle Settings Key", toggleSettingsKey, ImGuiKey_Escape);
 
+            ImGui::PopStyleColor();
+            ImGui::PopStyleVar();
             ImGui::EndTable();
-            PopStyleCompact();
+            // PopStyleCompact();
         }
     }
     std::string toggleUiKeyName = "F2";

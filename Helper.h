@@ -128,13 +128,67 @@ std::map<std::string, ImGuiKey> ImGuiKeyMap = {
 namespace Helper
 {
 
+    // IM GUI HELPERS
+
+    // Helper to display a little (?) mark which shows a tooltip when hovered.
+    // In your own code you may want to display an actual icon if you are using a merged icon fonts (see docs/FONTS.md)
+    void HelpMarker(const char *desc)
+    {
+        ImGui::TextDisabled("(?)");
+        if (ImGui::BeginItemTooltip())
+        {
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+            ImGui::TextUnformatted(desc);
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        }
+    }
+
     void Color2Column(const char *label, ImVec4 &color, ImGuiColorEditFlags flags = 0)
     {
         ImGui::TableNextColumn();
         ImGui::Text(label);
+        ImGui::SameLine();
+        HelpMarker("Click on the color square to open a color picker.\n CTRL+click on individual component to input value.\n");
         ImGui::TableNextColumn();
-        ImGui::ColorEdit4(label, (float *)&color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | flags);
+        // swap float for ImGuiColorEditFlags_NoInputs to remove teh rgb settings
+        ImGui::ColorEdit3(label, (float *)&color, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoLabel | flags);
     }
+
+    void KeyBind(const char *name, ImGuiKey &key, ImGuiKey default_key)
+    {
+        ImGui::TableNextColumn();
+        ImGui::Text("%s:", name);
+        ImGui::TableNextColumn();
+        std::string buttonName = "Current Key: [";
+        buttonName += ImGui::GetKeyName(key);
+        buttonName += "]##" + std::string(name);
+        std::string popupName = buttonName + "popup";
+        if (ImGui::Button(buttonName.c_str()))
+        {
+            ImGui::SetNextWindowFocus();
+            ImGui::OpenPopup(popupName.c_str());
+        }
+
+        if (ImGui::BeginPopup(popupName.c_str()))
+        {
+            ImGui::Text("You are here to change the keybind for %s", name);
+            ImGui::Separator();
+            ImGui::Text("Current Keybind: %s", ImGui::GetKeyName(key));
+            ImGui::Text("Default Keybind: %s", ImGui::GetKeyName(default_key));
+            ImGui::Text("Hold down the keys you want to bind and click Accept.");
+            if (ImGui::Button("Accept and Close"))
+            {
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel and Close"))
+                ImGui::CloseCurrentPopup();
+            ImGui::EndPopup();
+        }
+    }
+
+    // TOML HELPERS
 
     ImVec4 tomlToImVec4(const toml::table &tbl, std::string key, ImVec4 default_value = ImVec4(1.0f, 1.0f, 1.0f, 1.0f))
     {
@@ -154,11 +208,11 @@ namespace Helper
         color = Helper::tomlToImVec4(table, name, color);
     }
 
-    void loadTomlKeybind(toml::table &table, const char *name, const char *default_value, ImGuiKey &key, std::string &keyName)
+    void loadTomlKeybind(toml::table &table, const char *name, const char *default_value, ImGuiKey &key)
     {
         if (default_value == nullptr)
         {
-            keyName = (std::string)table[name].value_or("");
+            std::string keyName = (std::string)table[name].value_or("");
             if (keyName == "")
             {
                 throw std::runtime_error("Keybind " + (std::string)name + " is required - has no default value -  and is not set in the config toml");
@@ -166,7 +220,7 @@ namespace Helper
             return;
         }
 
-        keyName = (std::string)table[name].value_or(default_value);
+        std::string keyName = (std::string)table[name].value_or(default_value);
         key = ImGuiKeyMap[keyName];
     }
 }
