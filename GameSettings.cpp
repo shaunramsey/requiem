@@ -10,7 +10,6 @@
 #include "GameSettings.h"
 #include "Console.h"
 
-
 // Make the UI compact because there are so many fields
 static void PushStyleCompact()
 {
@@ -27,7 +26,6 @@ static void PopStyleCompact()
 ConsoleSettings::ConsoleSettings()
 {
 }
-
 void ConsoleSettings::loadToml(toml::table &tbl)
 {
     if (tbl["Console"].as_table() == nullptr)
@@ -43,9 +41,16 @@ void ConsoleSettings::loadToml(toml::table &tbl)
     Helper::loadTomlColor(table, "DebugColor", DebugColor);
     Helper::loadTomlColor(table, "MainConsoleBgColor", MainConsoleBgColor);
 }
-
 void ConsoleSettings::saveToml(toml::table &tbl)
 {
+    toml::table table;
+    std::cout << "  [-] Saving console settings to toml" << std::endl;
+    table.insert("WarningColor", Helper::ImVec4ToToml(WarningColor));
+    table.insert("ErrorColor", Helper::ImVec4ToToml(ErrorColor));
+    table.insert("LogColor", Helper::ImVec4ToToml(LogColor));
+    table.insert("DebugColor", Helper::ImVec4ToToml(DebugColor));
+    table.insert("MainConsoleBgColor", Helper::ImVec4ToToml(MainConsoleBgColor));
+    tbl.insert("Console", table);
 }
 void ConsoleSettings::drawImGui()
 {
@@ -119,7 +124,6 @@ GameSettings::GameSettings()
 {
     // Initialize default settings
 }
-
 void GameSettings::loadDefaults(std::string filename)
 {
     std::cout << "[*] Loading game settings from toml" << std::endl;
@@ -128,7 +132,6 @@ void GameSettings::loadDefaults(std::string filename)
     consoleSettings.loadToml(settingsTable);
     keyBindSettings.loadToml(settingsTable);
 }
-
 void GameSettings::saveChanges(std::string filename)
 {
     std::cout << "[*] Saving game settings to toml" << std::endl;

@@ -18,6 +18,7 @@ namespace Helper
     void KeyBind(const char *name, ImGuiKey &in_key, ImGuiKey default_key);
     // TOML HELPERS
     ImVec4 tomlToImVec4(const toml::table &tbl, std::string key, ImVec4 default_value = ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+    toml::array ImVec4ToToml(const ImVec4 &color);
     void loadTomlColor(toml::table &table, const char *name, ImVec4 &color);
     void loadTomlKeybind(toml::table &table, const char *name, const char *default_value, ImGuiKey &key);
 }

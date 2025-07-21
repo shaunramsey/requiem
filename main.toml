@@ -1,0 +1,12 @@
+[Console]
+DebugColor = [ 0.0, 1.0, 1.0, 1.0 ]
+ErrorColor = [ 1.0, 0.0, 0.0, 1.0 ]
+LogColor = [ 1.0, 1.0, 1.0, 1.0 ]
+MainConsoleBgColor = [ 0.20000000298023224, 0.20000000298023224, 0.20000000298023224, 0.8999999761581421 ]
+WarningColor = [ 1.0, 1.0, 0.0, 1.0 ]
+
+[KeyBindings]
+ToggleConsoleKey = 'GraveAccent'
+ToggleSettingsKey = 'Escape'
+ToggleStatsKey = 'F3'
+ToggleUiKey = 'F2'

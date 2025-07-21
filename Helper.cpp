@@ -173,22 +173,20 @@ namespace Helper
 
         if (ImGui::BeginPopup(popupName.c_str()))
         {
+            ImGuiIO &io = ImGui::GetIO();
             static ImGuiKey lastKeyPress = in_key;
+            float mousey = io.MousePos.y - ImGui::GetWindowPos().y;
+            bool allow_change = mousey < 100.0f;
             ImGui::Text("You are here to change the keybind for %s", name);
-
+            ImGui::Text("You may %sedit the key now", allow_change ? "" : "NOT ");
             ImGui::Separator();
             ImGui::Text("Current Keybind: %s", ImGui::GetKeyName(in_key));
             ImGui::Text("Default Keybind: %s", ImGui::GetKeyName(default_key));
-            ImGuiIO &io = ImGui::GetIO();
-            bool enable = io.MousePos.y - ImGui::GetWindowPos().y < 120.0f;
-            if (enable)
-            {
-                ImGui::TextDisabled("Key Is Set - Move mouse here to enable key capture");
-            }
+
             ImGui::Text("Keys down:");
             ImGui::SameLine();
 
-            if (enable)
+            if (allow_change)
             {
 
                 for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
@@ -204,6 +202,11 @@ namespace Helper
             else
             {
                 ImGui::Text("\"%s\"", ImGui::GetKeyName(lastKeyPress));
+            }
+            if (!allow_change)
+            {
+                ImGui::SameLine();
+                ImGui::TextDisabled("Key Is Set - Move mouse here to enable key capture");
             }
             // debug for positions and super keys
             //  ImVec2 window_pos = ImGui::GetWindowPos();
@@ -227,6 +230,15 @@ namespace Helper
     }
 
     // TOML HELPERS
+    toml::array ImVec4ToToml(const ImVec4 &color)
+    {
+        toml::array arr;
+        arr.push_back(color.x);
+        arr.push_back(color.y);
+        arr.push_back(color.z);
+        arr.push_back(color.w);
+        return arr;
+    }
 
     ImVec4 tomlToImVec4(const toml::table &tbl, std::string key, ImVec4 default_value)
     {
