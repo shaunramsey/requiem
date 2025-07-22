@@ -9,8 +9,8 @@
 #include "externs.h"
 
 // Make the UI compact because there are so many fields
-static void PushStyleCompact();
-static void PopStyleCompact();
+// static void PushStyleCompact();
+// static void PopStyleCompact();
 
 class ConsoleSettings
 {
@@ -43,6 +43,18 @@ public:
     ImGuiKey toggleSettingsKey = ImGuiKey_Escape;
 };
 
+class GraphicsSettings
+{
+public:
+    GraphicsSettings();
+    void loadToml(toml::table &tbl);
+    void saveToml(toml::table &tbl);
+    void drawImGui();
+    bool vsync = true;
+
+private:
+};
+
 class GameSettings
 {
 public:
@@ -51,6 +63,7 @@ public:
     void saveChanges(std::string filename = "main.toml");
     ConsoleSettings consoleSettings;
     KeyBindSettings keyBindSettings;
+    GraphicsSettings graphicsSettings;
 
 private:
     toml::table settingsTable;

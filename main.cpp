@@ -582,11 +582,11 @@ private:
         //    if (ImGui::GetIO().WantCaptureKeyboard)
         //     return;
         if (ImGui::IsKeyPressed(ImGuiKey_Backslash) || ImGui::IsKeyPressed(gameSettings.keyBindSettings.toggleConsoleKey))
+        // if (ImGui::IsKeyPressed(ImGuiKey_GraveAccent)) // || ImGui::IsKeyPressed(ImGuiKey_Backslash))
         {
             _show_console = !_show_console;
         }
 
-     
         if (ImGui::IsKeyPressed(gameSettings.keyBindSettings.toggleUiKey))
         {
             _hide_all_gui = !_hide_all_gui;
@@ -1761,6 +1761,9 @@ private:
 
     VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR> &availablePresentModes)
     {
+        if(gameSettings.graphicsSettings.vsync) {
+            return VK_PRESENT_MODE_FIFO_KHR; // enables vsync
+        }
         for (const auto &availablePresentMode : availablePresentModes)
         {
             if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
@@ -1768,8 +1771,7 @@ private:
                 return availablePresentMode;
             }
         }
-
-        return VK_PRESENT_MODE_FIFO_KHR;
+        return VK_PRESENT_MODE_FIFO_KHR; // enables vsync
     }
 
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities)
