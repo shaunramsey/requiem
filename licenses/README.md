@@ -12,5 +12,5 @@ We use a variety of libraries to make different things happen.
 - cereal offers great header-only serialization libraries for c++. See [cereal.license](cereal.license).
 [GitHub.Io](https://uscilab.github.io/cereal/) or [GitHub](https://github.com/uscilab/cereal)
 
-- toml is another brand of serialization that supports comments and exports to things like JSON. See [toml.license](tomlpluspluslicense).
+- toml is another brand of serialization that supports comments. See [toml.license](tomlpluspluslicense).
 [GitHub.Io](https://marzer.github.io/tomlplusplus/) [GitHub](https://github.com/marzer/tomlplusplus)

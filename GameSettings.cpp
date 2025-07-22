@@ -42,6 +42,28 @@ void GraphicsSettings::saveToml(toml::table &tbl)
     tbl.insert("Graphics", table);
 }
 
+void GraphicsSettings::drawImGui()
+{
+    ImGui::Text("Graphics Settings");
+    ImGui::SameLine();
+    ImGui::Text("(APPLY and RESTART is required to take effect)");
+    ImGui::Separator();
+    if (ImGui::BeginTable("table_columns_flags_checkboxes", 2, ImGuiTableFlags_None))
+    {
+        // ImGui::TableSetupColumn("Column1", ImGuiTableColumnFlags_WidthStretch, 0.5f);
+        // // Second column: Remaining space (will automatically be 50% in this case)
+        // ImGui::TableSetupColumn("Column2", ImGuiTableColumnFlags_WidthStretch);
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("VSync");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Checkbox("##vsync", &vsync);
+
+        ImGui::EndTable();
+    }
+}
+
 ConsoleSettings::ConsoleSettings()
 {
 }

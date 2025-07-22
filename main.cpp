@@ -441,10 +441,10 @@ private:
                 }
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("Display"))
+            if (ImGui::BeginTabItem("Graphics"))
             {
-                ImGui::Text("This is the Display tab!");
-                // gs.displaySettings.drawImGui();
+                ImGui::Text("This is the Graphics tab!");
+                gs.graphicsSettings.drawImGui();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("KeyBinds"))
@@ -1761,7 +1761,8 @@ private:
 
     VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR> &availablePresentModes)
     {
-        if(gameSettings.graphicsSettings.vsync) {
+        if (gameSettings.graphicsSettings.vsync)
+        {
             return VK_PRESENT_MODE_FIFO_KHR; // enables vsync
         }
         for (const auto &availablePresentMode : availablePresentModes)
