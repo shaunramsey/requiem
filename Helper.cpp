@@ -152,8 +152,7 @@ namespace Helper
         ImGui::SameLine();
         HelpMarker("Click on the color square to open a color picker.\n CTRL+click on individual component to input value.\n");
         ImGui::TableNextColumn();
-        // swap float for ImGuiColorEditFlags_NoInputs to remove teh rgb settings
-        ImGui::ColorEdit3(label, (float *)&color, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoLabel | flags);
+        ImGui::ColorEdit4(label, (float *)&color, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoLabel | flags);
     }
 
     void KeyBind(const char *name, ImGuiKey &in_key, ImGuiKey default_key)

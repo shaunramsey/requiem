@@ -61,6 +61,10 @@ void ConsoleSettings::drawImGui()
     static ImGuiColorEditFlags base_flags = ImGuiColorEditFlags_None;
     if (ImGui::BeginTable("table_columns_flags_checkboxes", 2, ImGuiTableFlags_None))
     {
+        ImGui::TableSetupColumn("Column1", ImGuiTableColumnFlags_WidthStretch, 0.5f);
+        // Second column: Remaining space (will automatically be 50% in this case)
+        ImGui::TableSetupColumn("Column2", ImGuiTableColumnFlags_WidthStretch);
+
         Helper::Color2Column("Warning Color", WarningColor, base_flags);
         Helper::Color2Column("Error Color", ErrorColor, base_flags);
         Helper::Color2Column("Log Color", LogColor, base_flags);
