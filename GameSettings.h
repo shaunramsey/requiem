@@ -51,6 +51,8 @@ public:
     void saveToml(toml::table &tbl);
     void drawImGui();
     bool vsync = true;
+    bool fullscreenPrimary = false;
+    bool borderlessWindow = false;
 
 private:
 };

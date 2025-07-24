@@ -33,12 +33,16 @@ void GraphicsSettings::loadToml(toml::table &tbl)
     _console.Log("TOML", "    [-] Loading graphics settings from toml");
     toml::table table = *tbl["Graphics"].as_table();
     vsync = table["vsync"].value_or(true);
+    borderlessWindow = table["borderlessWindow"].value_or(false);
+    fullscreenPrimary = table["fullscreenPrimary"].value_or(false);
 }
 
 void GraphicsSettings::saveToml(toml::table &tbl)
 {
     toml::table table;
     table.insert("vsync", vsync);
+    table.insert("borderlessWindow", borderlessWindow);
+    table.insert("fullscreenPrimary", fullscreenPrimary);
     tbl.insert("Graphics", table);
 }
 
@@ -59,6 +63,32 @@ void GraphicsSettings::drawImGui()
         ImGui::Text("VSync");
         ImGui::TableSetColumnIndex(1);
         ImGui::Checkbox("##vsync", &vsync);
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("Fullscreen");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Checkbox("##fullscreenPrimary", &fullscreenPrimary);
+
+        if (fullscreenPrimary)
+        {
+            ImGui::Indent();
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("Borderless Window");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Checkbox("##borderless", &borderlessWindow);
+            ImGui::SameLine();
+
+            if (borderlessWindow)
+            {
+                Helper::HelpMarker("( Fullscreen Borderless Window selected )");
+            }
+            else
+            {
+                Helper::HelpMarker("( Fullscreen (not windowed) selected )");
+            }
+            ImGui::Unindent();
+        }
 
         ImGui::EndTable();
     }

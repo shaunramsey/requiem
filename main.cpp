@@ -255,9 +255,30 @@ private:
 
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, 1);
-        // glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
 
-        window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+        if (gameSettings.graphicsSettings.fullscreenPrimary)
+        {
+            glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+            GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+            const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+            glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+            glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+            glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
+            glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+            if (gameSettings.graphicsSettings.borderlessWindow)
+            {
+
+                window = glfwCreateWindow(mode->width, mode->height, "Ramsey's Window", nullptr, nullptr);
+            }
+            else
+            {
+                window = glfwCreateWindow(mode->width, mode->height, "Ramsey's Window", monitor, nullptr);
+            }
+        }
+        else
+        {
+            window = glfwCreateWindow(WIDTH, HEIGHT, "Ramsey's Window", nullptr, nullptr);
+        }
         glfwSetWindowUserPointer(window, this);
         glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
     }
