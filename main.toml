@@ -7,7 +7,7 @@ WarningColor = [ 1.0, 0.4749999940395355, 0.0, 1.0 ]
 
 [Graphics]
 borderlessWindow = true
-fullscreenPrimary = true
+fullscreenPrimary = false
 vsync = true
 
 [KeyBindings]

@@ -658,11 +658,6 @@ private:
             // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
             // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 
-            // double tickPeriodSeconds = static_cast<double>(period::num) / period::den;
-            // std::cout << "Tick period: " << tickPeriodSeconds << " seconds" << std::endl;
-
-            // std::cout << "time is: " << dt << std::endl;
-            // std::cout << "    fps: " << 1.0 / dt << std::endl;
             processImGuiEvents();
             glfwPollEvents();
 
@@ -1993,7 +1988,9 @@ private:
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
-    std::cout << "key: " << key << " scan: " << scancode << " action:" << action << " mods:" << mods << std::endl;
+    std::string logMsg = "key " + std::to_string(key) + " scancode " + std::to_string(scancode) + " action " + std::to_string(action) + " mods " + std::to_string(mods);
+    _console.Log("key_callback", logMsg.c_str());
+
     HelloRayMarchSphereApplication *ptr = (HelloRayMarchSphereApplication *)glfwGetWindowUserPointer(window);
     bool pressed = action == GLFW_REPEAT || action == GLFW_PRESS;
     if (key == GLFW_KEY_UP && pressed)
@@ -2012,10 +2009,13 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
     {
         ptr->UniformData.rotation += glm::vec2(0.1, 0.0);
     }
-    std::cout << "New Rotation Is: " << ptr->UniformData.rotation.x << ", " << ptr->UniformData.rotation.y << std::endl;
+
+    std::string logMsg2 = "Old Rotation Is: " + std::to_string(ptr->UniformData.rotation.x) + ", " + std::to_string(ptr->UniformData.rotation.y);
+    _console.Log("key_callback", logMsg2.c_str());
     ptr->UniformData.rotation.x = glm::mod(ptr->UniformData.rotation.x, 3.14159265f * 2.0f);
     ptr->UniformData.rotation.y = glm::mod(ptr->UniformData.rotation.y, 3.14159265f * 2.0f);
-    std::cout << "Mod Rotation Is: " << ptr->UniformData.rotation.x << ", " << ptr->UniformData.rotation.y << std::endl;
+    std::string logMsg3 = "New Rotation Is: " + std::to_string(ptr->UniformData.rotation.x) + ", " + std::to_string(ptr->UniformData.rotation.y);
+    _console.Log("key_callback", logMsg3.c_str());
 }
 
 int main()

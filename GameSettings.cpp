@@ -39,6 +39,7 @@ void GraphicsSettings::loadToml(toml::table &tbl)
 
 void GraphicsSettings::saveToml(toml::table &tbl)
 {
+    _console.Log("TOML", "    [-] Saving graphics settings to toml");
     toml::table table;
     table.insert("vsync", vsync);
     table.insert("borderlessWindow", borderlessWindow);
@@ -63,6 +64,8 @@ void GraphicsSettings::drawImGui()
         ImGui::Text("VSync");
         ImGui::TableSetColumnIndex(1);
         ImGui::Checkbox("##vsync", &vsync);
+        ImGui::SameLine();
+        Helper::HelpMarker("With Vsync disabled, the game will run as fast as possible, which may lead to high CPU/GPU usage. With Vsync enabled, the game will run at the monitor's refresh rate, which may lead to lower CPU/GPU usage and increased input lag.");
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
         ImGui::Text("Fullscreen");
@@ -115,7 +118,7 @@ void ConsoleSettings::loadToml(toml::table &tbl)
 void ConsoleSettings::saveToml(toml::table &tbl)
 {
     toml::table table;
-    std::cout << "  [-] Saving console settings to toml" << std::endl;
+    _console.Log("TOML", "    [-] Saving console settings to toml");
     table.insert("WarningColor", Helper::ImVec4ToToml(WarningColor));
     table.insert("ErrorColor", Helper::ImVec4ToToml(ErrorColor));
     table.insert("LogColor", Helper::ImVec4ToToml(LogColor));
@@ -163,7 +166,7 @@ void KeyBindSettings::loadToml(toml::table &tbl)
 void KeyBindSettings::saveToml(toml::table &tbl)
 {
     toml::table table;
-    std::cout << "  [-] Saving key bindings to toml" << std::endl;
+    _console.Log("TOML", "    [-] Saving key bindings to toml");
     table.insert("ToggleUiKey", ImGui::GetKeyName(toggleUiKey));
     table.insert("ToggleStatsKey", ImGui::GetKeyName(toggleStatsKey));
     table.insert("ToggleConsoleKey", ImGui::GetKeyName(toggleConsoleKey));
@@ -223,6 +226,8 @@ void GameSettings::saveChanges(std::string filename)
     }
     else
     {
-        std::cerr << "Could not open file for writing: " << filename << std::endl;
+        std::string errorMsg = "Could not open file for writing: " + filename;
+        _console.ErrorLog("TOML", errorMsg.c_str());
+        // std::cerr << "Could not open file for writing: " << filename << std::endl;
     }
 }
