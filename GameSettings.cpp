@@ -47,6 +47,13 @@ void GraphicsSettings::saveToml(toml::table &tbl)
     tbl.insert("Graphics", table);
 }
 
+bool GraphicsSettings::isEqual(const GraphicsSettings &other) const
+{
+    return vsync == other.vsync &&
+           borderlessWindow == other.borderlessWindow &&
+           fullscreenPrimary == other.fullscreenPrimary;
+}
+
 void GraphicsSettings::drawImGui()
 {
     ImGui::Text("Graphics Settings");
@@ -126,6 +133,30 @@ void ConsoleSettings::saveToml(toml::table &tbl)
     table.insert("MainConsoleBgColor", Helper::ImVec4ToToml(MainConsoleBgColor));
     tbl.insert("Console", table);
 }
+bool ConsoleSettings::isEqual(const ConsoleSettings &other) const
+{
+    return WarningColor.x == other.WarningColor.x &&
+           WarningColor.y == other.WarningColor.y &&
+           WarningColor.z == other.WarningColor.z &&
+           WarningColor.w == other.WarningColor.w &&
+           ErrorColor.x == other.ErrorColor.x &&
+           ErrorColor.y == other.ErrorColor.y &&
+           ErrorColor.z == other.ErrorColor.z &&
+           ErrorColor.w == other.ErrorColor.w &&
+           LogColor.x == other.LogColor.x &&
+           LogColor.y == other.LogColor.y &&
+           LogColor.z == other.LogColor.z &&
+           LogColor.w == other.LogColor.w &&
+           DebugColor.x == other.DebugColor.x &&
+           DebugColor.y == other.DebugColor.y &&
+           DebugColor.z == other.DebugColor.z &&
+           DebugColor.w == other.DebugColor.w &&
+           MainConsoleBgColor.x == other.MainConsoleBgColor.x &&
+           MainConsoleBgColor.y == other.MainConsoleBgColor.y &&
+           MainConsoleBgColor.z == other.MainConsoleBgColor.z &&
+           MainConsoleBgColor.w == other.MainConsoleBgColor.w;
+}
+
 void ConsoleSettings::drawImGui()
 {
     ImGui::Text("Console Colors");
@@ -173,6 +204,14 @@ void KeyBindSettings::saveToml(toml::table &tbl)
     table.insert("ToggleSettingsKey", ImGui::GetKeyName(toggleSettingsKey));
     tbl.insert("KeyBindings", table);
 }
+
+bool KeyBindSettings::isEqual(const KeyBindSettings &other) const
+{
+    return toggleUiKey == other.toggleUiKey &&
+           toggleStatsKey == other.toggleStatsKey &&
+           toggleConsoleKey == other.toggleConsoleKey &&
+           toggleSettingsKey == other.toggleSettingsKey;
+}
 void KeyBindSettings::drawImGui()
 {
     ImGui::Text("Key Bindings");
@@ -209,6 +248,7 @@ void GameSettings::loadDefaults(std::string filename)
     keyBindSettings.loadToml(settingsTable);
     graphicsSettings.loadToml(settingsTable);
 }
+
 void GameSettings::saveChanges(std::string filename)
 {
     _console.Log("TOML", "[*] Saving game settings to toml");
@@ -230,4 +270,11 @@ void GameSettings::saveChanges(std::string filename)
         _console.ErrorLog("TOML", errorMsg.c_str());
         // std::cerr << "Could not open file for writing: " << filename << std::endl;
     }
+}
+
+bool GameSettings::isEqual(const GameSettings &other) const
+{
+    return consoleSettings.isEqual(other.consoleSettings) &&
+           keyBindSettings.isEqual(other.keyBindSettings) &&
+           graphicsSettings.isEqual(other.graphicsSettings);
 }

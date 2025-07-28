@@ -18,6 +18,7 @@ public:
     ConsoleSettings();
     void loadToml(toml::table &tbl);
     void saveToml(toml::table &tbl);
+    bool isEqual(const ConsoleSettings &other) const;
     void drawImGui();
     ImVec4 WarningColor = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
     ImVec4 ErrorColor = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
@@ -32,6 +33,7 @@ public:
     KeyBindSettings();
     void loadToml(toml::table &tbl);
     void saveToml(toml::table &tbl);
+    bool isEqual(const KeyBindSettings &other) const;
     void drawImGui();
     std::string toggleUiKeyName = "F2";
     std::string toggleStatsKeyName = "F3";
@@ -49,6 +51,7 @@ public:
     GraphicsSettings();
     void loadToml(toml::table &tbl);
     void saveToml(toml::table &tbl);
+    bool isEqual(const GraphicsSettings &other) const;
     void drawImGui();
     bool vsync = true;
     bool fullscreenPrimary = false;
@@ -63,6 +66,7 @@ public:
     GameSettings();
     void loadDefaults(std::string filename = "main.toml");
     void saveChanges(std::string filename = "main.toml");
+    bool isEqual(const GameSettings &other) const;
     ConsoleSettings consoleSettings;
     KeyBindSettings keyBindSettings;
     GraphicsSettings graphicsSettings;

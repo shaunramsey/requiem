@@ -1,0 +1,1 @@
+- This is not an open source project. Feel free to join the discord or open an issue on github to chat about the project or to contact me.

@@ -49,6 +49,28 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+// A struct to manage data related to one image in vulkan
+struct MyTextureData
+{
+    VkDescriptorSet DS; // Descriptor set: this is what you'll pass to Image()
+    int Width;
+    int Height;
+    int Channels;
+
+    // Need to keep track of these to properly cleanup
+    VkImageView ImageView;
+    VkImage Image;
+    VkDeviceMemory ImageMemory;
+    VkSampler Sampler;
+    VkBuffer UploadBuffer;
+    VkDeviceMemory UploadBufferMemory;
+
+    MyTextureData() { memset(this, 0, sizeof(*this)); }
+};
+
 static void check_vk_result(VkResult err)
 {
     if (err == VK_SUCCESS)
@@ -183,7 +205,7 @@ private:
     bool _show_game_settings = false;
 
     GLFWwindow *window;
-
+    VkInstanceCreateInfo _createInfo;
     VkInstance instance;
     VkDebugUtilsMessengerEXT debugMessenger;
     VkSurfaceKHR surface;
@@ -232,8 +254,10 @@ private:
     std::vector<VkFence> inFlightFences;
 
     uint32_t currentFrame = 0;
-
+    std::vector<VkFence> imagesInFlight;
     uint64_t frameCount = 0;
+
+    MyTextureData my_texture;
 
     bool framebufferResized = false;
 
@@ -315,6 +339,212 @@ private:
         createDescriptorSets();
         createCommandBuffers();
         createSyncObjects();
+    }
+
+    // Helper function to load an image with common settings and return a MyTextureData with a VkDescriptorSet as a sort of Vulkan pointer
+    bool LoadTextureFromFile(const char *filename, MyTextureData *tex_data)
+    {
+        // Specifying 4 channels forces stb to load the image in RGBA which is an easy format for Vulkan
+        tex_data->Channels = 4;
+        unsigned char *image_data = stbi_load(filename, &tex_data->Width, &tex_data->Height, 0, tex_data->Channels);
+
+        if (image_data == NULL)
+            return false;
+
+        // Calculate allocation size (in number of bytes)
+        size_t image_size = tex_data->Width * tex_data->Height * tex_data->Channels;
+
+        VkResult err;
+
+        // Create the Vulkan image.
+        {
+            VkImageCreateInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+            info.imageType = VK_IMAGE_TYPE_2D;
+            info.format = VK_FORMAT_R8G8B8A8_UNORM;
+            info.extent.width = tex_data->Width;
+            info.extent.height = tex_data->Height;
+            info.extent.depth = 1;
+            info.mipLevels = 1;
+            info.arrayLayers = 1;
+            info.samples = VK_SAMPLE_COUNT_1_BIT;
+            info.tiling = VK_IMAGE_TILING_OPTIMAL;
+            info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+            info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            err = vkCreateImage(device, &info, NullAllocator, &tex_data->Image);
+            check_vk_result(err);
+            VkMemoryRequirements req;
+            vkGetImageMemoryRequirements(device, tex_data->Image, &req);
+            VkMemoryAllocateInfo alloc_info = {};
+            alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            alloc_info.allocationSize = req.size;
+            alloc_info.memoryTypeIndex = findMemoryType(req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            err = vkAllocateMemory(device, &alloc_info, NullAllocator, &tex_data->ImageMemory);
+            check_vk_result(err);
+            err = vkBindImageMemory(device, tex_data->Image, tex_data->ImageMemory, 0);
+            check_vk_result(err);
+        }
+
+        // Create the Image View
+        {
+            VkImageViewCreateInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            info.image = tex_data->Image;
+            info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            info.format = VK_FORMAT_R8G8B8A8_UNORM;
+            info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            info.subresourceRange.levelCount = 1;
+            info.subresourceRange.layerCount = 1;
+            err = vkCreateImageView(device, &info, NullAllocator, &tex_data->ImageView);
+            check_vk_result(err);
+        }
+
+        // Create Sampler
+        {
+            VkSamplerCreateInfo sampler_info{};
+            sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+            sampler_info.magFilter = VK_FILTER_LINEAR;
+            sampler_info.minFilter = VK_FILTER_LINEAR;
+            sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT; // outside image bounds just use border color
+            sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            sampler_info.minLod = -1000;
+            sampler_info.maxLod = 1000;
+            sampler_info.maxAnisotropy = 1.0f;
+            err = vkCreateSampler(device, &sampler_info, NullAllocator, &tex_data->Sampler);
+            check_vk_result(err);
+        }
+
+        // Create Descriptor Set using ImGUI's implementation
+        tex_data->DS = ImGui_ImplVulkan_AddTexture(tex_data->Sampler, tex_data->ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+        // Create Upload Buffer
+        {
+            VkBufferCreateInfo buffer_info = {};
+            buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            buffer_info.size = image_size;
+            buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+            buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            err = vkCreateBuffer(device, &buffer_info, NullAllocator, &tex_data->UploadBuffer);
+            check_vk_result(err);
+            VkMemoryRequirements req;
+            vkGetBufferMemoryRequirements(device, tex_data->UploadBuffer, &req);
+            VkMemoryAllocateInfo alloc_info = {};
+            alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            alloc_info.allocationSize = req.size;
+            alloc_info.memoryTypeIndex = findMemoryType(req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            err = vkAllocateMemory(device, &alloc_info, NullAllocator, &tex_data->UploadBufferMemory);
+            check_vk_result(err);
+            err = vkBindBufferMemory(device, tex_data->UploadBuffer, tex_data->UploadBufferMemory, 0);
+            check_vk_result(err);
+        }
+
+        // Upload to Buffer:
+        {
+            void *map = NULL;
+            err = vkMapMemory(device, tex_data->UploadBufferMemory, 0, image_size, 0, &map);
+            check_vk_result(err);
+            memcpy(map, image_data, image_size);
+            VkMappedMemoryRange range[1] = {};
+            range[0].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+            range[0].memory = tex_data->UploadBufferMemory;
+            range[0].size = image_size;
+            err = vkFlushMappedMemoryRanges(device, 1, range);
+            check_vk_result(err);
+            vkUnmapMemory(device, tex_data->UploadBufferMemory);
+        }
+
+        // Release image memory using stb
+        stbi_image_free(image_data);
+
+        // Create a command buffer that will perform following steps when hit in the command queue.
+        // TODO: this works in the example, but may need input if this is an acceptable way to access the pool/create the command buffer.
+        // VkCommandPool command_pool = g_MainWindowData.Frames[g_MainWindowData.FrameIndex].CommandPool;
+        VkCommandBuffer command_buffer;
+        {
+            VkCommandBufferAllocateInfo alloc_info{};
+            alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            alloc_info.commandPool = commandPool;
+            alloc_info.commandBufferCount = 1;
+
+            err = vkAllocateCommandBuffers(device, &alloc_info, &command_buffer);
+            check_vk_result(err);
+
+            VkCommandBufferBeginInfo begin_info = {};
+            begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            err = vkBeginCommandBuffer(command_buffer, &begin_info);
+            check_vk_result(err);
+        }
+
+        // Copy to Image
+        {
+            VkImageMemoryBarrier copy_barrier[1] = {};
+            copy_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            copy_barrier[0].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            copy_barrier[0].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            copy_barrier[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            copy_barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            copy_barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            copy_barrier[0].image = tex_data->Image;
+            copy_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            copy_barrier[0].subresourceRange.levelCount = 1;
+            copy_barrier[0].subresourceRange.layerCount = 1;
+            vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, copy_barrier);
+
+            VkBufferImageCopy region = {};
+            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.layerCount = 1;
+            region.imageExtent.width = tex_data->Width;
+            region.imageExtent.height = tex_data->Height;
+            region.imageExtent.depth = 1;
+            vkCmdCopyBufferToImage(command_buffer, tex_data->UploadBuffer, tex_data->Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+            VkImageMemoryBarrier use_barrier[1] = {};
+            use_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            use_barrier[0].srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            use_barrier[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            use_barrier[0].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            use_barrier[0].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            use_barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            use_barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            use_barrier[0].image = tex_data->Image;
+            use_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            use_barrier[0].subresourceRange.levelCount = 1;
+            use_barrier[0].subresourceRange.layerCount = 1;
+            vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, use_barrier);
+        }
+
+        // End command buffer
+        {
+            VkSubmitInfo end_info = {};
+            end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            end_info.commandBufferCount = 1;
+            end_info.pCommandBuffers = &command_buffer;
+            err = vkEndCommandBuffer(command_buffer);
+            check_vk_result(err);
+            err = vkQueueSubmit(graphicsQueue, 1, &end_info, VK_NULL_HANDLE);
+            check_vk_result(err);
+            err = vkDeviceWaitIdle(device);
+            check_vk_result(err);
+        }
+
+        return true;
+    }
+
+    // Helper function to cleanup an image loaded with LoadTextureFromFile
+    void RemoveTexture(MyTextureData *tex_data)
+    {
+        vkFreeMemory(device, tex_data->UploadBufferMemory, nullptr);
+        vkDestroyBuffer(device, tex_data->UploadBuffer, nullptr);
+        vkDestroySampler(device, tex_data->Sampler, nullptr);
+        vkDestroyImageView(device, tex_data->ImageView, nullptr);
+        vkDestroyImage(device, tex_data->Image, nullptr);
+        vkFreeMemory(device, tex_data->ImageMemory, nullptr);
+        // ImGui_ImplVulkan_RemoveTexture(tex_data->DS);
     }
 
     void drawAbout()
@@ -426,24 +656,39 @@ private:
         }
         // button bar
         {
-            if (ImGui::Button("Apply"))
+            bool isEqual = gameSettings.isEqual(modifiableGameSettings);
+            if (!isEqual)
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.0f, 0.4f, 0.0f, 1.0f});
+
+            if (ImGui::Button("Save and Apply"))
             {
                 gameSettings = modifiableGameSettings;
                 gameSettings.saveChanges(); // save the modified settings to main.toml
                 toggleGameSettingsWindow(); // close the window
             }
+            if (!isEqual)
+                ImGui::PopStyleColor();
+
             ImGui::SameLine();
+            if (!isEqual)
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.6f, 0.0f, 0.0f, 1.0f});
             if (ImGui::Button("Quit without Applying"))
             {
                 toggleGameSettingsWindow();
             }
+            if (!isEqual)
+                ImGui::PopStyleColor();
             ImGui::SameLine();
-            if (ImGui::Button("Restore and Apply Defaults"))
+            if (!isEqual)
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.0f, 0.25f, 0.5f, 1.0f});
+            if (ImGui::Button("Restore Defaults"))
             {
-                gameSettings = GameSettings();
-                gameSettings.saveChanges(); // save the default settings to main.toml
-                toggleGameSettingsWindow(); // close the window
+                modifiableGameSettings = GameSettings();
+                //gameSettings.saveChanges(); // save the default settings to main.toml
+                //toggleGameSettingsWindow(); // close the window
             }
+            if (!isEqual)
+                ImGui::PopStyleColor();
         }
         ImGui::Text("Which settings would you like to change?");
         ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
@@ -549,13 +794,19 @@ private:
         }
 
         if (show_demo_window)
+        {
             ImGui::ShowDemoWindow(&show_demo_window);
+        }
         // call all the draw stuffs
         if (_show_about)
+        {
             drawAbout();
+        }
 
         if (_show_stats)
+        {
             drawStats(dt);
+        }
 
         if (_show_console)
         {
@@ -564,7 +815,15 @@ private:
         }
 
         if (_show_game_settings)
+        {
             drawGameSettingsWindow(modifiableGameSettings);
+        }
+
+        ImGui::Begin("Vulkan Texture Test");
+        ImGui::Text("descriptor set = %p", my_texture.DS);
+        ImGui::Text("size = %d x %d", my_texture.Width, my_texture.Height);
+        ImGui::Image((ImTextureID)my_texture.DS, ImVec2(my_texture.Width, my_texture.Height));
+        ImGui::End();
 
         ImGui::Render();
     }
@@ -693,6 +952,7 @@ private:
     {
         std::cout << "[*] Performing Cleanup" << std::endl;
         ImGui_ImplVulkan_Shutdown();
+
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
 
@@ -710,6 +970,7 @@ private:
         vkDestroyDescriptorPool(device, descriptorPool, nullptr);
         vkDestroyDescriptorPool(device, imguiDescriptorPool, nullptr);
         vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+        RemoveTexture(&my_texture);
 
         vkDestroyBuffer(device, indexBuffer, nullptr);
         vkFreeMemory(device, indexBufferMemory, nullptr);
@@ -721,6 +982,9 @@ private:
         {
             vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
             vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
+        }
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+        {
             vkDestroyFence(device, inFlightFences[i], nullptr);
         }
 
@@ -765,6 +1029,11 @@ private:
         init_info.Allocator = NullAllocator;
         init_info.CheckVkResultFn = check_vk_result;
         ImGui_ImplVulkan_Init(&init_info);
+
+        std::string filename = "testimage.jpg";
+        bool ret = LoadTextureFromFile(filename.c_str(), &my_texture);
+        IM_ASSERT(ret);
+        std::cout << "[*] Loaded texture: " << my_texture.DS << " from: " << filename << " with size: " << my_texture.Width << " x " << my_texture.Height << std::endl;
     }
 
     void createDescriptorSets()
@@ -819,9 +1088,10 @@ private:
             throw std::runtime_error("failed to create descriptor pool!");
         }
 
+        // THIS IS WHERE WE BEGIN WITH THE IMGUI DESCRIPTOR POOL
         VkDescriptorPoolSize pool_sizes[] =
             {
-                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE},
+                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2},
             };
         VkDescriptorPoolCreateInfo pool_info = {};
         pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -934,31 +1204,31 @@ private:
         appInfo.engineVersion = VK_MAKE_VERSION(0, 0, 1);
         appInfo.apiVersion = VK_API_VERSION_1_0;
 
-        VkInstanceCreateInfo createInfo{};
-        createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        createInfo.pApplicationInfo = &appInfo;
+        _createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        _createInfo.pApplicationInfo = &appInfo;
 
         auto extensions = getRequiredExtensions();
-        createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-        createInfo.ppEnabledExtensionNames = extensions.data();
+        _createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+        _createInfo.ppEnabledExtensionNames = extensions.data();
 
         VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
         if (enableValidationLayers)
         {
-            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-            createInfo.ppEnabledLayerNames = validationLayers.data();
+            _createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+            _createInfo.ppEnabledLayerNames = validationLayers.data();
 
             populateDebugMessengerCreateInfo(debugCreateInfo);
-            createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
+            _createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
         }
         else
         {
-            createInfo.enabledLayerCount = 0;
+            _createInfo.enabledLayerCount = 0;
 
-            createInfo.pNext = nullptr;
+            _createInfo.pNext = nullptr;
         }
 
-        if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
+        std::cout << "[*] Creating Vulkan Instance" << std::endl;
+        if (vkCreateInstance(&_createInfo, NullAllocator, &instance) != VK_SUCCESS)
         {
             throw std::runtime_error("failed to create instance!");
         }
@@ -1087,7 +1357,7 @@ private:
         {
             imageCount = swapChainSupport.capabilities.maxImageCount;
         }
-
+        // imageCount = 2;
         VkSwapchainCreateInfoKHR createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
         createInfo.surface = surface;
@@ -1125,6 +1395,7 @@ private:
 
         vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
         swapChainImages.resize(imageCount);
+        std::cout << "[*] Swapchain image count: " << imageCount << std::endl;
         vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
 
         swapChainImageFormat = surfaceFormat.format;
@@ -1535,6 +1806,19 @@ private:
         throw std::runtime_error("failed to find suitable memory type!");
     }
 
+    // Helper function to find Vulkan memory type bits. See ImGui_ImplVulkan_MemoryType() in imgui_impl_vulkan.cpp
+    // uint32_t findMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties)
+    // {
+    //     VkPhysicalDeviceMemoryProperties mem_properties;
+    //     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &mem_properties);
+
+    //     for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++)
+    //         if ((type_filter & (1 << i)) && (mem_properties.memoryTypes[i].propertyFlags & properties) == properties)
+    //             return i;
+
+    //     return 0xFFFFFFFF; // Unable to find memoryType
+    // }
+
     void createCommandBuffers()
     {
         commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1621,9 +1905,11 @@ private:
 
     void createSyncObjects()
     {
+
         imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
         renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
         inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+        imagesInFlight.resize(swapChainImages.size());
 
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -1635,10 +1921,16 @@ private:
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
         {
             if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-                vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
-                vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS)
+                vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS)
             {
-                throw std::runtime_error("failed to create synchronization objects for a frame!");
+                throw std::runtime_error("failed to create synchronization semaphores for a swapchain!");
+            }
+        }
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+        {
+            if (vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS)
+            {
+                throw std::runtime_error("failed to create synchronization fences for a frame!");
             }
         }
     }
@@ -1669,8 +1961,9 @@ private:
 
         vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
-        uint32_t imageIndex;
+        uint32_t imageIndex = 0;
         VkResult result = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+        // std::cout << "[*] Acquired image index: " << imageIndex << " with current frame: " << currentFrame << std::endl;
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR)
         {
@@ -1681,6 +1974,13 @@ private:
         {
             throw std::runtime_error("failed to acquire swap chain image!");
         }
+
+        if (imagesInFlight[imageIndex] != VK_NULL_HANDLE)
+        {
+            vkWaitForFences(device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+        }
+        // Mark this image as now being in use by this frame
+        imagesInFlight[imageIndex] = inFlightFences[currentFrame];
 
         updateUniformBuffer(currentFrame);
 
@@ -1980,6 +2280,15 @@ private:
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData)
     {
         std::string datanull = pUserData == NULL ? "yes" : "no";
+        std::string msg = pCallbackData->pMessage;
+        if (msg.find("Loading layer library") != std::string::npos)
+        {
+            return VK_FALSE; // Ignore layer loading messages
+        }
+        if (msg.find("Unloading layer library") != std::string::npos)
+        {
+            return VK_FALSE; // Ignore layer unloading messages
+        }
         std::cerr << "  [*] Validation layer: " << pCallbackData->pMessage;
         std::cerr << " Type: " << messageType << " Severity:" << messageSeverity << " userdatanull?:" << datanull << std::endl;
         return VK_FALSE;
