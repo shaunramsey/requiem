@@ -54,7 +54,7 @@ bool GraphicsSettings::isEqual(const GraphicsSettings &other) const
            fullscreenPrimary == other.fullscreenPrimary;
 }
 
-void GraphicsSettings::drawImGui()
+void GraphicsSettings::drawImGui(const GraphicsSettings &comparisonGS)
 {
     ImGui::Text("Graphics Settings");
     ImGui::SameLine();
@@ -65,38 +65,13 @@ void GraphicsSettings::drawImGui()
         // ImGui::TableSetupColumn("Column1", ImGuiTableColumnFlags_WidthStretch, 0.5f);
         // // Second column: Remaining space (will automatically be 50% in this case)
         // ImGui::TableSetupColumn("Column2", ImGuiTableColumnFlags_WidthStretch);
-
-        ImGui::TableNextRow();
-        ImGui::TableSetColumnIndex(0);
-        ImGui::Text("VSync");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::Checkbox("##vsync", &vsync);
-        ImGui::SameLine();
-        Helper::HelpMarker("With Vsync disabled, the game will run as fast as possible, which may lead to high CPU/GPU usage. With Vsync enabled, the game will run at the monitor's refresh rate, which may lead to lower CPU/GPU usage and increased input lag.");
-        ImGui::TableNextRow();
-        ImGui::TableSetColumnIndex(0);
-        ImGui::Text("Fullscreen");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::Checkbox("##fullscreenPrimary", &fullscreenPrimary);
+        Helper::Checkbox2Column("VSync", "With Vsync disabled, the game will run as fast as possible, which may lead to high CPU/GPU usage. With Vsync enabled, the game will run at the monitor's refresh rate, which may lead to lower CPU/GPU usage and increased input lag.", vsync, comparisonGS.vsync);
+        Helper::Checkbox2Column("Fullscreen", "When not selected, a normal window will appear", fullscreenPrimary, comparisonGS.fullscreenPrimary);
 
         if (fullscreenPrimary)
         {
             ImGui::Indent();
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::Text("Borderless Window");
-            ImGui::TableSetColumnIndex(1);
-            ImGui::Checkbox("##borderless", &borderlessWindow);
-            ImGui::SameLine();
-
-            if (borderlessWindow)
-            {
-                Helper::HelpMarker("( Fullscreen Borderless Window selected )");
-            }
-            else
-            {
-                Helper::HelpMarker("( Fullscreen (not windowed) selected )");
-            }
+            Helper::Checkbox2Column("Borderless Window", "Fullscreen Borderless Window when selected, Fullscreen (not windowed) when not selected", borderlessWindow, comparisonGS.borderlessWindow);
             ImGui::Unindent();
         }
 
@@ -157,7 +132,7 @@ bool ConsoleSettings::isEqual(const ConsoleSettings &other) const
            MainConsoleBgColor.w == other.MainConsoleBgColor.w;
 }
 
-void ConsoleSettings::drawImGui()
+void ConsoleSettings::drawImGui(const ConsoleSettings &comparisonCS)
 {
     ImGui::Text("Console Colors");
     ImGui::SameLine();
@@ -170,11 +145,11 @@ void ConsoleSettings::drawImGui()
         // Second column: Remaining space (will automatically be 50% in this case)
         ImGui::TableSetupColumn("Column2", ImGuiTableColumnFlags_WidthStretch);
 
-        Helper::Color2Column("Warning Color", WarningColor, base_flags);
-        Helper::Color2Column("Error Color", ErrorColor, base_flags);
-        Helper::Color2Column("Log Color", LogColor, base_flags);
-        Helper::Color2Column("Debug Color", DebugColor, base_flags);
-        Helper::Color2Column("Main Console Background Color", MainConsoleBgColor, base_flags);
+        Helper::Color2Column("Warning Color", WarningColor, comparisonCS.WarningColor, base_flags);
+        Helper::Color2Column("Error Color", ErrorColor, comparisonCS.ErrorColor, base_flags);
+        Helper::Color2Column("Log Color", LogColor, comparisonCS.LogColor, base_flags);
+        Helper::Color2Column("Debug Color", DebugColor, comparisonCS.DebugColor, base_flags);
+        Helper::Color2Column("Main Console Background Color", MainConsoleBgColor, comparisonCS.MainConsoleBgColor, base_flags);
         ImGui::EndTable();
     }
 }
@@ -212,7 +187,7 @@ bool KeyBindSettings::isEqual(const KeyBindSettings &other) const
            toggleConsoleKey == other.toggleConsoleKey &&
            toggleSettingsKey == other.toggleSettingsKey;
 }
-void KeyBindSettings::drawImGui()
+void KeyBindSettings::drawImGui(const KeyBindSettings &comparisonKBS)
 {
     ImGui::Text("Key Bindings");
     ImGui::SameLine();
@@ -224,10 +199,10 @@ void KeyBindSettings::drawImGui()
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f, 12.0f));
         ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
 
-        Helper::KeyBind("Toggle UI Key", toggleUiKey, ImGuiKey_F2);
-        Helper::KeyBind("Toggle Stats Key", toggleStatsKey, ImGuiKey_F3);
-        Helper::KeyBind("Toggle Console Key", toggleConsoleKey, ImGuiKey_GraveAccent);
-        Helper::KeyBind("Toggle Settings Key", toggleSettingsKey, ImGuiKey_Escape);
+        Helper::KeyBind("Toggle UI Key", toggleUiKey, comparisonKBS.toggleUiKey, ImGuiKey_F2);
+        Helper::KeyBind("Toggle Stats Key", toggleStatsKey, comparisonKBS.toggleStatsKey, ImGuiKey_F3);
+        Helper::KeyBind("Toggle Console Key", toggleConsoleKey, comparisonKBS.toggleConsoleKey, ImGuiKey_GraveAccent);
+        Helper::KeyBind("Toggle Settings Key", toggleSettingsKey, comparisonKBS.toggleSettingsKey, ImGuiKey_Escape);
 
         ImGui::PopStyleColor();
         ImGui::PopStyleVar();

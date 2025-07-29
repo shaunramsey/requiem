@@ -261,6 +261,8 @@ private:
 
     bool framebufferResized = false;
 
+    int firstTabOpen = 1;
+
     void initSettings()
     {
         gameSettings.loadDefaults();
@@ -638,10 +640,57 @@ private:
         _show_game_settings = !_show_game_settings;
         if (_show_game_settings)
         { // then make a copy of the current game settings for use in game settings display
+            firstTabOpen = 1;
             modifiableGameSettings = gameSettings;
         }
     }
-    void drawGameSettingsWindow(GameSettings &gs)
+
+    void gameSettingsButtonBar(bool sameline, bool isEqual)
+    {
+
+        int buttonWidth = sameline ? 150 : 250;
+        if (!isEqual)
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.0f, 0.4f, 0.0f, 1.0f});
+
+        if (ImGui::Button("Save and Apply", ImVec2(buttonWidth, 0)))
+        {
+            gameSettings = modifiableGameSettings;
+            gameSettings.saveChanges(); // save the modified settings to main.toml
+            toggleGameSettingsWindow(); // close the window
+        }
+        if (!isEqual)
+            ImGui::PopStyleColor();
+
+        if (sameline)
+            ImGui::SameLine();
+
+        if (!isEqual)
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.6f, 0.0f, 0.0f, 1.0f});
+        if (ImGui::Button("Discard Changes", ImVec2(buttonWidth, 0)))
+        {
+            toggleGameSettingsWindow();
+        }
+        if (!isEqual)
+            ImGui::PopStyleColor();
+
+        if (sameline)
+            ImGui::SameLine();
+
+        if (!isEqual)
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.0f, 0.25f, 0.5f, 1.0f});
+
+        if (ImGui::Button("Restore Defaults", ImVec2(buttonWidth, 0)))
+        {
+            modifiableGameSettings = GameSettings();
+            // gameSettings.saveChanges(); // save the default settings to main.toml
+            // toggleGameSettingsWindow(); // close the window
+        }
+
+        if (!isEqual)
+            ImGui::PopStyleColor();
+    }
+
+    void drawGameSettingsWindow(GameSettings &gs, const GameSettings &comparisonGS)
     {
         const ImGuiViewport *viewport = ImGui::GetMainViewport();
         ImVec2 work_pos = viewport->WorkPos; // Use work area to avoid menu-bar/task-bar, if any!
@@ -654,80 +703,47 @@ private:
             ImGui::End();
             return;
         }
-        // button bar
+        bool isEqual = gameSettings.isEqual(modifiableGameSettings);
+        gameSettingsButtonBar(true, isEqual);
         {
-            bool isEqual = gameSettings.isEqual(modifiableGameSettings);
-            if (!isEqual)
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.0f, 0.4f, 0.0f, 1.0f});
-
-            if (ImGui::Button("Save and Apply"))
+            ImGui::Text("Which settings would you like to change?");
+            ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
+            if (ImGui::BeginTabBar("GameSettingsTabBar", tab_bar_flags))
             {
-                gameSettings = modifiableGameSettings;
-                gameSettings.saveChanges(); // save the modified settings to main.toml
-                toggleGameSettingsWindow(); // close the window
-            }
-            if (!isEqual)
-                ImGui::PopStyleColor();
-
-            ImGui::SameLine();
-            if (!isEqual)
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.6f, 0.0f, 0.0f, 1.0f});
-            if (ImGui::Button("Quit without Applying"))
-            {
-                toggleGameSettingsWindow();
-            }
-            if (!isEqual)
-                ImGui::PopStyleColor();
-            ImGui::SameLine();
-            if (!isEqual)
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.0f, 0.25f, 0.5f, 1.0f});
-            if (ImGui::Button("Restore Defaults"))
-            {
-                modifiableGameSettings = GameSettings();
-                //gameSettings.saveChanges(); // save the default settings to main.toml
-                //toggleGameSettingsWindow(); // close the window
-            }
-            if (!isEqual)
-                ImGui::PopStyleColor();
-        }
-        ImGui::Text("Which settings would you like to change?");
-        ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
-        if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
-        {
-            if (ImGui::BeginTabItem("Settings"))
-            {
-                ImGui::Text("This is the Main Settings tab!");
-                if (ImGui::Button("Close Settings"))
+                if (ImGui::BeginTabItem("Settings", nullptr, firstTabOpen ? ImGuiTabItemFlags_SetSelected : tab_bar_flags))
                 {
-                    _show_game_settings = false;
+                    ImGui::Text("Welcome to the Overall Game Settings!");
+                    firstTabOpen = 0;
+                    gameSettingsButtonBar(false, isEqual);
+                    if (ImGui::Button("Quit - Close Application - Do Not Save Changes"))
+                    {
+                        glfwSetWindowShouldClose(window, GLFW_TRUE);
+                    }
+
+                    ImGui::EndTabItem();
                 }
-                if (ImGui::Button("Quit - Close Application"))
+                if (ImGui::BeginTabItem("Graphics"))
                 {
-                    glfwSetWindowShouldClose(window, GLFW_TRUE);
+                    ImGui::Text("Welcome to the Graphics Settings!");
+                    gs.graphicsSettings.drawImGui(comparisonGS.graphicsSettings);
+                    ImGui::EndTabItem();
                 }
-                ImGui::EndTabItem();
+                if (ImGui::BeginTabItem("KeyBinds"))
+                {
+                    ImGui::Text("Welcome to the KeyBinds Settings!");
+                    gs.keyBindSettings.drawImGui(comparisonGS.keyBindSettings);
+                    ImGui::EndTabItem();
+                }
+                if (ImGui::BeginTabItem("Console"))
+                {
+                    ImGui::Text("Welcome to the Console Settings!");
+                    gs.consoleSettings.drawImGui(comparisonGS.consoleSettings);
+                    ImGui::EndTabItem();
+                }
+                ImGui::EndTabBar();
             }
-            if (ImGui::BeginTabItem("Graphics"))
-            {
-                ImGui::Text("This is the Graphics tab!");
-                gs.graphicsSettings.drawImGui();
-                ImGui::EndTabItem();
-            }
-            if (ImGui::BeginTabItem("KeyBinds"))
-            {
-                ImGui::Text("This is the KeyBinds tab!");
-                gs.keyBindSettings.drawImGui();
-                ImGui::EndTabItem();
-            }
-            if (ImGui::BeginTabItem("Console"))
-            {
-                ImGui::Text("This is the Console tab!");
-                gs.consoleSettings.drawImGui();
-                ImGui::EndTabItem();
-            }
-            ImGui::EndTabBar();
+            ImGui::End();
         }
-        ImGui::End();
     }
 
     void drawImGui(float dt)
@@ -816,13 +832,13 @@ private:
 
         if (_show_game_settings)
         {
-            drawGameSettingsWindow(modifiableGameSettings);
+            drawGameSettingsWindow(modifiableGameSettings, gameSettings);
         }
 
         ImGui::Begin("Vulkan Texture Test");
         ImGui::Text("descriptor set = %p", my_texture.DS);
         ImGui::Text("size = %d x %d", my_texture.Width, my_texture.Height);
-        ImGui::Image((ImTextureID)my_texture.DS, ImVec2(my_texture.Width, my_texture.Height));
+        ImGui::Image((ImTextureID)my_texture.DS, ImVec2(float(my_texture.Width), float(my_texture.Height)));
         ImGui::End();
 
         ImGui::Render();

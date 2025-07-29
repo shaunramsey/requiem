@@ -145,35 +145,104 @@ namespace Helper
         }
     }
 
-    void Color2Column(const char *label, ImVec4 &color, ImGuiColorEditFlags flags)
+    void Checkbox2Column(const char *label, const char *helpmarkerText, bool &value, const bool &comparisonValue)
     {
+        ImGui::TableNextColumn();
+        bool pop = false;
+        if (value != comparisonValue)
+        {
+            pop = true;
+            ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.9f, 0.4f, 0.0f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.9f, 0.4f, 0.0f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.4f, 0.0f, 1.0f));
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+        }
+
+        ImGui::Text("%s:", label);
+
+        ImGui::TableNextColumn();
+        std::string checkboxId = "##" + std::string(label);
+        if (ImGui::Checkbox(checkboxId.c_str(), &value))
+        {
+            // Handle checkbox change if needed
+        }
+        if (helpmarkerText && helpmarkerText[0] != '\0')
+        {
+            ImGui::SameLine();
+            Helper::HelpMarker(helpmarkerText);
+        }
+
+        if (pop)
+        {
+            ImGui::PopStyleColor(3); // Pop both CheckMark and Text styles
+            ImGui::PopStyleVar();    // Pop the FrameBorderSize style
+        }
+    }
+
+    void Color2Column(const char *label, ImVec4 &color, const ImVec4 &comparisonColor, ImGuiColorEditFlags flags)
+    {
+
+        bool pop = false;
+        if (color.x != comparisonColor.x ||
+            color.y != comparisonColor.y ||
+            color.z != comparisonColor.z ||
+            color.w != comparisonColor.w)
+        {
+            pop = true;
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.4f, 0.0f, 1.0f));
+        }
+
         ImGui::TableNextColumn();
         ImGui::Text(label);
         ImGui::SameLine();
         HelpMarker("Click on the color square to open a color picker.\n CTRL+click on individual component to input value.\n");
         ImGui::TableNextColumn();
         ImGui::ColorEdit4(label, (float *)&color, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoLabel | flags);
+        if (pop)
+        {
+            ImGui::PopStyleColor();
+        }
     }
 
-    void KeyBind(const char *name, ImGuiKey &in_key, ImGuiKey default_key)
+    void KeyBind(const char *name, ImGuiKey &in_key, const ImGuiKey &comparison_key, ImGuiKey default_key)
     {
+        static ImGuiKey lastKeyPress = in_key;
         ImGui::TableNextColumn();
-        ImGui::Text("%s:", name);
+        if (in_key != comparison_key)
+        {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.4f, 0.0f, 1.0f));
+            ImGui::Text("%s:", name);
+            ImGui::PopStyleColor();
+        }
+        else
+        {
+            ImGui::Text("%s:", name);
+        }
         ImGui::TableNextColumn();
+
         std::string buttonName = "Current Key: [";
         buttonName += ImGui::GetKeyName(in_key);
         buttonName += "]##" + std::string(name);
         std::string popupName = buttonName + "popup";
+        if (in_key != comparison_key)
+        {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.9f, 0.4f, 0.0f, 1.0f));
+        }
         if (ImGui::Button(buttonName.c_str()))
         {
             ImGui::SetNextWindowFocus();
+            lastKeyPress = in_key;
             ImGui::OpenPopup(popupName.c_str());
+        }
+        if (in_key != comparison_key)
+        {
+            ImGui::PopStyleColor();
         }
 
         if (ImGui::BeginPopup(popupName.c_str()))
         {
             ImGuiIO &io = ImGui::GetIO();
-            static ImGuiKey lastKeyPress = in_key;
+
             float mousey = io.MousePos.y - ImGui::GetWindowPos().y;
             bool allow_change = mousey < 100.0f;
             ImGui::Text("You are here to change the keybind for %s", name);
@@ -214,10 +283,20 @@ namespace Helper
             // ImGui::Text("Keys mods: %s%s%s%s", io.KeyCtrl ? "CTRL " : "", io.KeyShift ? "SHIFT " : "", io.KeyAlt ? "ALT " : "", io.KeySuper ? "SUPER " : "");
 
             ImGui::Separator();
+            bool pop = false;
+            if (in_key != lastKeyPress)
+            {
+                pop = true;
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.9f, 0.4f, 0.0f, 1.0f));
+            }
             if (ImGui::Button("Accept and Close"))
             {
                 in_key = lastKeyPress;
                 ImGui::CloseCurrentPopup();
+            }
+            if (pop)
+            {
+                ImGui::PopStyleColor();
             }
             ImGui::SameLine();
             if (ImGui::Button("Cancel and Close"))

@@ -19,7 +19,7 @@ public:
     void loadToml(toml::table &tbl);
     void saveToml(toml::table &tbl);
     bool isEqual(const ConsoleSettings &other) const;
-    void drawImGui();
+    void drawImGui(const ConsoleSettings &comparisonCS);
     ImVec4 WarningColor = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
     ImVec4 ErrorColor = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
     ImVec4 LogColor = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -34,7 +34,7 @@ public:
     void loadToml(toml::table &tbl);
     void saveToml(toml::table &tbl);
     bool isEqual(const KeyBindSettings &other) const;
-    void drawImGui();
+    void drawImGui(const KeyBindSettings &comparisonKBS);
     std::string toggleUiKeyName = "F2";
     std::string toggleStatsKeyName = "F3";
     std::string toggleConsoleKeyName = "GraveAccent";
@@ -52,7 +52,7 @@ public:
     void loadToml(toml::table &tbl);
     void saveToml(toml::table &tbl);
     bool isEqual(const GraphicsSettings &other) const;
-    void drawImGui();
+    void drawImGui(const GraphicsSettings &comparisonGS);
     bool vsync = true;
     bool fullscreenPrimary = false;
     bool borderlessWindow = false;
