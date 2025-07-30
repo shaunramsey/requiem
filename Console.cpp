@@ -158,6 +158,7 @@ namespace Ramsey
         std::string now = "[";
         now += std::format("{:%d-%m-%Y %H:%M:%OS}", nynow) + "] [" + environment_desc + "] ";
         log_history.push_back(ColorString(now + std::string(prepend) + inputString, color));
+        timed_log.push_back(ColorTimedString(now + std::string(prepend) + inputString, color));
     }
 
     void Console::DebugLog(const char *environment_desc, const char *fstring, va_list args_list)
@@ -308,25 +309,13 @@ namespace Ramsey
     //     log_history.push_back(ColorString(final_string, {0.7f, 0.9f, 0.9f, 1.0f}));
     // }
 
-    void Console::draw(bool *p_open)
+    void Console::drawConsole(ImVec2 size, bool show)
     {
-        static int guess_size = 0;
-        ImGuiViewport *imguiViewport = ImGui::GetMainViewport();
-        ImVec2 size = imguiViewport->WorkSize;
-        ImVec2 pos = imguiViewport->WorkPos;
-        pos.y += size[1];
-
-        size[1] = (float)(size[1] * 0.7f);
-        size[1] -= guess_size;
-
-        ImGui::SetNextWindowSize(size, ImGuiCond_Always);
-        ImGui::SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.0, 1.0f));
-
         ImGui::PushStyleColor(ImGuiCol_WindowBg, gameSettings.consoleSettings.MainConsoleBgColor);
         const static ImGuiWindowFlags winFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings;
 
         const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-        if (!ImGui::Begin("Console", p_open, winFlags))
+        if (!ImGui::Begin("Console", &show, winFlags))
         {
             ImGui::PopStyleColor();
             ImGui::End();
@@ -342,16 +331,10 @@ namespace Ramsey
             ImGui::TextWrapped(log_history[i].myString.c_str());
             ImGui::PopStyleColor();
         }
-        // ImGui::SetScrollY(ImGui::GetScrollMaxY());
-        // ImGui::End();
 
-        pos[1] = size[1];
-        size[1] = (float)guess_size;
-        // ImGui::SetNextWindowSize(size, ImGuiCond_Always);
-        // ImGui::SetNextWindowPos(pos);
-        // ImGui::Begin("##You Don't Know", NULL, winFlags);
-        // ImGui::SetNextChild
-        // ImGui::BeginChild("##You odn't know", size, 0, winFlags);
+        // pos[1] = size[1];
+        // size[1] = 0.0f;;
+
         ImGui::SetScrollHereY(1.0f);
         if (ImGui::IsWindowFocused() && ImGui::IsMouseDown(ImGuiMouseButton_Left))
         {
@@ -390,6 +373,65 @@ namespace Ramsey
         ImGui::SetScrollY(ImGui::GetScrollMaxY());
         ImGui::PopStyleColor();
         ImGui::End();
+    }
+
+    void Console::drawToast(bool show)
+    {
+        if (!show)
+            return;
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+
+        const static ImGuiWindowFlags toastFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoBackground;
+        if (!ImGui::Begin("ConsoleToast", nullptr, toastFlags))
+        {
+            ImGui::PopStyleColor();
+            ImGui::End();
+            return;
+        }
+        for (int i = 0; i < timed_log.size(); i++)
+        {
+            auto now = std::chrono::system_clock::now();
+            if (timed_log[i].time + timed_log[i].duration < now)
+            {
+                // remove this log entry
+                timed_log.erase(timed_log.begin() + i);
+                --i; // adjust index since we removed an element
+                continue;
+            }
+            ImGui::PushStyleColor(ImGuiCol_Text, timed_log[i].color);
+            ImGui::TextWrapped(timed_log[i].myString.c_str());
+            ImGui::PopStyleColor();
+        }
+        ImGui::PopStyleColor();
+        ImGui::End();
+    }
+
+    void Console::drawImGui(bool *p_open)
+    {
+
+        ImGuiViewport *imguiViewport = ImGui::GetMainViewport();
+        ImVec2 size = imguiViewport->WorkSize;
+        ImVec2 pos = imguiViewport->WorkPos;
+        pos.y += size[1];
+        size[1] = (float)(size[1] * 0.7f);
+
+        if (p_open && *p_open == true)
+        {
+            ImGui::SetNextWindowSize(size, ImGuiCond_Always);
+            ImGui::SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.0, 1.0f));
+            drawConsole(size);
+        }
+
+        size = imguiViewport->WorkSize;
+        size[1] = 0.0f;
+        ImGui::SetNextWindowSize(size, ImGuiCond_Always);
+        ImGui::SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.0, 1.0f));
+        bool showToast = true;
+        if (p_open && *p_open == true)
+        {
+            showToast = false;
+        }
+        drawToast(showToast);
     }
 
 } // namespace Ramsey

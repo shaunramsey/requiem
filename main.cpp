@@ -632,7 +632,7 @@ private:
 
     void drawConsole()
     {
-        _console.draw(&_show_console);
+        _console.drawImGui(&_show_console);
     }
 
     void toggleGameSettingsWindow()
@@ -648,11 +648,11 @@ private:
     void gameSettingsButtonBar(bool sameline, bool isEqual)
     {
 
-        int buttonWidth = sameline ? 150 : 250;
+        float buttonWidth = sameline ? 150.0f : 250.0f;
         if (!isEqual)
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.0f, 0.4f, 0.0f, 1.0f});
 
-        if (ImGui::Button("Save and Apply", ImVec2(buttonWidth, 0)))
+        if (ImGui::Button("Save and Apply", ImVec2(buttonWidth, 0.0f)))
         {
             gameSettings = modifiableGameSettings;
             gameSettings.saveChanges(); // save the modified settings to main.toml
@@ -666,7 +666,7 @@ private:
 
         if (!isEqual)
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.6f, 0.0f, 0.0f, 1.0f});
-        if (ImGui::Button("Discard Changes", ImVec2(buttonWidth, 0)))
+        if (ImGui::Button("Discard Changes", ImVec2(buttonWidth, 0.0f)))
         {
             toggleGameSettingsWindow();
         }
@@ -679,7 +679,7 @@ private:
         if (!isEqual)
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.0f, 0.25f, 0.5f, 1.0f});
 
-        if (ImGui::Button("Restore Defaults", ImVec2(buttonWidth, 0)))
+        if (ImGui::Button("Restore Defaults", ImVec2(buttonWidth, 0.0f)))
         {
             modifiableGameSettings = GameSettings();
             // gameSettings.saveChanges(); // save the default settings to main.toml
@@ -824,9 +824,9 @@ private:
             drawStats(dt);
         }
 
+        drawConsole();
         if (_show_console)
         {
-            drawConsole();
             ImGui::SetWindowFocus("Console");
         }
 
@@ -994,9 +994,12 @@ private:
         vkDestroyBuffer(device, vertexBuffer, nullptr);
         vkFreeMemory(device, vertexBufferMemory, nullptr);
 
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+        for (size_t i = 0; i < swapChainImages.size(); i++)
         {
             vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
+        }
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+        {
             vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
         }
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
@@ -1373,7 +1376,7 @@ private:
         {
             imageCount = swapChainSupport.capabilities.maxImageCount;
         }
-        // imageCount = 2;
+
         VkSwapchainCreateInfoKHR createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
         createInfo.surface = surface;
@@ -1923,7 +1926,7 @@ private:
     {
 
         imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-        renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+        renderFinishedSemaphores.resize(swapChainImages.size());
         inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
         imagesInFlight.resize(swapChainImages.size());
 
@@ -1934,13 +1937,22 @@ private:
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+        for (size_t i = 0; i < swapChainImages.size(); i++)
         {
-            if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-                vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS)
+            if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS)
             {
                 throw std::runtime_error("failed to create synchronization semaphores for a swapchain!");
             }
+
+            //printf("rende Semaphore %d -> %p\n", (int)i, renderFinishedSemaphores[i]);
+        }
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+        {
+            if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS)
+            {
+                throw std::runtime_error("failed to create synchronization semaphores for a swapchain!");
+            }
+            //printf("avail Semaphore %d -> %p\n", (int)i, imageAvailableSemaphores[i]);
         }
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
         {
@@ -1974,7 +1986,6 @@ private:
 
     void drawFrame()
     {
-
         vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex = 0;
@@ -1991,12 +2002,12 @@ private:
             throw std::runtime_error("failed to acquire swap chain image!");
         }
 
-        if (imagesInFlight[imageIndex] != VK_NULL_HANDLE)
-        {
-            vkWaitForFences(device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
-        }
-        // Mark this image as now being in use by this frame
-        imagesInFlight[imageIndex] = inFlightFences[currentFrame];
+        // if (imagesInFlight[imageIndex] != VK_NULL_HANDLE)
+        // {
+        //     vkWaitForFences(device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+        // }
+        // // Mark this image as now being in use by this frame
+        // imagesInFlight[imageIndex] = inFlightFences[currentFrame];
 
         updateUniformBuffer(currentFrame);
 
@@ -2017,9 +2028,9 @@ private:
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
 
-        VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
+        VkSemaphore renderFinishedSemaphore[] = {renderFinishedSemaphores[imageIndex]};
         submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = signalSemaphores;
+        submitInfo.pSignalSemaphores = renderFinishedSemaphore;
 
         if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS)
         {
@@ -2030,7 +2041,7 @@ private:
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
         presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = signalSemaphores;
+        presentInfo.pWaitSemaphores = renderFinishedSemaphore;
 
         VkSwapchainKHR swapChains[] = {swapChain};
         presentInfo.swapchainCount = 1;

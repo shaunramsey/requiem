@@ -26,12 +26,23 @@ namespace Ramsey
         void loadToml(const toml::array &arr);
     };
 
-       class Console
+    class ColorTimedString : public ColorString
+    {
+    public:
+        ColorTimedString(std::string s = "", ImVec4 v = {1.0, 1.0, 1.0, 1.0}, std::chrono::seconds d = std::chrono::seconds(5), std::chrono::time_point<std::chrono::system_clock> t = std::chrono::system_clock::now())
+            : ColorString(s, v), time(t), duration(d) {}
+        std::chrono::time_point<std::chrono::system_clock> time;
+        std::chrono::seconds duration;
+    };
+
+    class Console
     {
 
     private:
         std::vector<ColorString> log_history;
         std::vector<std::string> command_history;
+        std::vector<ColorTimedString> timed_log;
+
         int current_index;
         const std::chrono::time_zone *new_york_tz = std::chrono::locate_zone("America/New_York");
 
@@ -49,6 +60,8 @@ namespace Ramsey
         int executeCommand(std::string s);
         static int ConsoleCommandCallback(ImGuiInputTextCallbackData *data);
         int ActualConsoleCommandCallback(ImGuiInputTextCallbackData *data);
-        void draw(bool *p_open = NULL);
+        void drawImGui(bool *p_open = NULL);
+        void drawConsole(ImVec2 size, bool show = false);
+        void drawToast(bool show = true);
     };
 }

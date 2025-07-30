@@ -19,7 +19,7 @@ const float shadow_dist = 0.01; // 0 - 1
 const float shadow_sharpness = 5.0; // 5-50
 #define HIT_EPS 0.001
 const int MAX_STEPS = 2048;
-const float MAX_DIST = 1000.0;
+const float MAX_DIST = 100.0;
 const vec2 EPS = vec2(0.01, 0.0);
 
 // Returns a pseudo-random float in [0, 1)
@@ -226,8 +226,9 @@ vec4 march_color(vec3 ro, vec3 rd) {
     vec2 hit = ray_march(ro, rd);
     if(hit.x > MAX_DIST) {
         vec3 p = ro + rd * MAX_DIST;
-        int row = int(int(p.y + 0.5)/40);
-        int col = int(int(p.x + 0.5)/40);
+        int size = 10;
+        int row = int(int(p.y + 0.5)/size);
+        int col = int(int(p.x + 0.5)/size);
         if ((row+col)%2 == 0) {
             return vec4(0.5, 0.5, 0.5, 1.0); // checkerboard pattern
         }
@@ -247,17 +248,18 @@ void main() {
     vec2 fragCoord = gl_FragCoord.xy;
     vec2 res = data.iResolution;
     
-    vec2 st = gl_FragCoord.xy / data.iResolution.xy * 2.0 - 1.0;
+    vec2 st = fragCoord / data.iResolution.xy * 2.0 - 1.0; //-1 to 1
     st.x *= data.iResolution.x / data.iResolution.y;
     st.y = -st.y;
 
     vec3 ro = data.camera; //0,0,-3
+
     vec3 rd = normalize(vec3(st, 1));
     
-    const int num_samples = 10; //300, 100, 30
+    const int num_samples = 100; //300, 100, 30
     vec4 newColor = vec4(0.0);
     for(int i = 0; i < num_samples; i++){
-        newColor += march_color(ro+vec3(float(i)*0.05/float(num_samples), 0.0, 0.0), rd);
+        newColor += march_color(ro + vec3( vec2(float(i)*0.05/float(num_samples)), 0.0), rd);
     }
 
     newColor /= float(num_samples);
