@@ -29,7 +29,7 @@ namespace Ramsey
     class ColorTimedString : public ColorString
     {
     public:
-        ColorTimedString(std::string s = "", ImVec4 v = {1.0, 1.0, 1.0, 1.0}, std::chrono::seconds d = std::chrono::seconds(5), std::chrono::time_point<std::chrono::system_clock> t = std::chrono::system_clock::now())
+        ColorTimedString(std::string s = "", ImVec4 v = {1.0, 1.0, 1.0, 1.0}, std::chrono::seconds d = std::chrono::seconds(10), std::chrono::time_point<std::chrono::system_clock> t = std::chrono::system_clock::now())
             : ColorString(s, v), time(t), duration(d) {}
         std::chrono::time_point<std::chrono::system_clock> time;
         std::chrono::seconds duration;

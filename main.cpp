@@ -30,7 +30,7 @@
 #include "externs.h"
 
 const uint32_t WIDTH = 800;
-const uint32_t HEIGHT = 600;
+const uint32_t HEIGHT = 800;
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 GameSettings gameSettings;
@@ -690,7 +690,7 @@ private:
             ImGui::PopStyleColor();
     }
 
-    void drawGameSettingsWindow(GameSettings &gs, const GameSettings &comparisonGS)
+    void drawImGuiGameSettingsWindow(GameSettings &gs, const GameSettings &comparisonGS)
     {
         const ImGuiViewport *viewport = ImGui::GetMainViewport();
         ImVec2 work_pos = viewport->WorkPos; // Use work area to avoid menu-bar/task-bar, if any!
@@ -752,6 +752,29 @@ private:
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         static bool show_demo_window = false;
+
+        if (glfwGetTime() < 10.0f)
+        {
+            ImGuiViewport *imguiViewport = ImGui::GetMainViewport();
+            ImVec2 size = imguiViewport->WorkSize;
+            size = ImVec2(size.x + 114.0f, size.y + 114.0f); // add a little padding to the size
+            ImGui::SetNextWindowPos(ImVec2(-2.0, -2.0), ImGuiCond_Always);
+            ImGui::SetNextWindowSize(size, ImGuiCond_Always);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+            ImGui::Begin("Vulkan Texture Test", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar);
+            // ImGui::Text("descriptor set = %p", my_texture.DS);
+            // ImGui::Text("size = %d x %d", my_texture.Width, my_texture.Height);
+            // ImGui::Text("winsize = %f, %f", size.x, size.y);
+            // std::string log = "win size = " + std::to_string(size.x) + ", " + std::to_string(size.y);
+            // std::cout << log << std::endl;
+            //_console.Log("LOAD", log.c_str(), nullptr);
+            ImGui::Image((ImTextureID)my_texture.DS, size, ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), ImVec4(1.0, 1.0, 1.0, 1.0), ImVec4(1.0f, 0.0f, 0.0f, 1.0f)); // ImVec2(float(my_texture.Width), float(my_texture.Height)));
+            ImGui::End();
+            ImGui::PopStyleVar(2);
+            ImGui::Render();
+            return;
+        }
 
         if (_hide_all_gui)
         {
@@ -832,14 +855,8 @@ private:
 
         if (_show_game_settings)
         {
-            drawGameSettingsWindow(modifiableGameSettings, gameSettings);
+            drawImGuiGameSettingsWindow(modifiableGameSettings, gameSettings);
         }
-
-        ImGui::Begin("Vulkan Texture Test");
-        ImGui::Text("descriptor set = %p", my_texture.DS);
-        ImGui::Text("size = %d x %d", my_texture.Width, my_texture.Height);
-        ImGui::Image((ImTextureID)my_texture.DS, ImVec2(float(my_texture.Width), float(my_texture.Height)));
-        ImGui::End();
 
         ImGui::Render();
     }
