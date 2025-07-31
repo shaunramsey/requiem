@@ -1941,18 +1941,18 @@ private:
         {
             if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS)
             {
-                throw std::runtime_error("failed to create synchronization semaphores for a swapchain!");
+                throw std::runtime_error("failed to create render finished semaphores for a swapchain!");
             }
 
-            //printf("rende Semaphore %d -> %p\n", (int)i, renderFinishedSemaphores[i]);
+            // printf("rende Semaphore %d -> %p\n", (int)i, renderFinishedSemaphores[i]);
         }
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
         {
             if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS)
             {
-                throw std::runtime_error("failed to create synchronization semaphores for a swapchain!");
+                throw std::runtime_error("failed to create image available semaphores for a swapchain!");
             }
-            //printf("avail Semaphore %d -> %p\n", (int)i, imageAvailableSemaphores[i]);
+            // printf("avail Semaphore %d -> %p\n", (int)i, imageAvailableSemaphores[i]);
         }
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
         {
