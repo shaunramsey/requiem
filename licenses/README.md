@@ -17,3 +17,5 @@ We use a variety of libraries to make different things happen.
 
 - stb is a collection of header utilities. We're using image. See [stb.license](stb.license).
 [GitHub](https://github.com/nothings/stb/blob/master/stb_image.h)
+
+- Fonts under creative commons that we used: [fonts.license](fonts.license)

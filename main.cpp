@@ -256,7 +256,7 @@ private:
     uint32_t currentFrame = 0;
     std::vector<VkFence> imagesInFlight;
     uint64_t frameCount = 0;
-
+    toml::table loadingMessagesTable;
     MyTextureData my_texture;
 
     bool framebufferResized = false;
@@ -294,11 +294,11 @@ private:
             if (gameSettings.graphicsSettings.borderlessWindow)
             {
 
-                window = glfwCreateWindow(mode->width, mode->height, "Ramsey's Window", nullptr, nullptr);
+                window = glfwCreateWindow(mode->width, mode->height, "Fluxwerkz's Window", nullptr, nullptr);
             }
             else
             {
-                window = glfwCreateWindow(mode->width, mode->height, "Ramsey's Window", monitor, nullptr);
+                window = glfwCreateWindow(mode->width, mode->height, "Fluxwerkz's Window", monitor, nullptr);
             }
         }
         else
@@ -753,16 +753,18 @@ private:
         ImGui::NewFrame();
         static bool show_demo_window = false;
 
-        if (glfwGetTime() < 10.0f)
+        static const double splashTime = 10.0f;
+        if (glfwGetTime() < splashTime)
         {
+            static toml::array *loadingMessages = loadingMessagesTable["loading_messages"].as_array();
             ImGuiViewport *imguiViewport = ImGui::GetMainViewport();
             ImVec2 size = imguiViewport->WorkSize;
-            size = ImVec2(size.x + 114.0f, size.y + 114.0f); // add a little padding to the size
+            size = ImVec2(size.x + 4.0f, size.y + 4.0f); // add a little padding to the size
             ImGui::SetNextWindowPos(ImVec2(-2.0, -2.0), ImGuiCond_Always);
             ImGui::SetNextWindowSize(size, ImGuiCond_Always);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-            ImGui::Begin("Vulkan Texture Test", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar);
+            ImGui::Begin("Splash Screen", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar);
             // ImGui::Text("descriptor set = %p", my_texture.DS);
             // ImGui::Text("size = %d x %d", my_texture.Width, my_texture.Height);
             // ImGui::Text("winsize = %f, %f", size.x, size.y);
@@ -770,8 +772,29 @@ private:
             // std::cout << log << std::endl;
             //_console.Log("LOAD", log.c_str(), nullptr);
             ImGui::Image((ImTextureID)my_texture.DS, size, ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), ImVec4(1.0, 1.0, 1.0, 1.0), ImVec4(1.0f, 0.0f, 0.0f, 1.0f)); // ImVec2(float(my_texture.Width), float(my_texture.Height)));
+
             ImGui::End();
             ImGui::PopStyleVar(2);
+
+            ImGui::SetNextWindowPos(ImVec2(size.x * 0.5f, size.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+            ImGui::Begin("Loading Messages", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar);
+            ImGui::Text("Loading... Please wait.");
+            if (loadingMessages != nullptr)
+            {
+                double timeEach = splashTime / loadingMessages->size();
+                int index = int(glfwGetTime() / timeEach);
+                // std::cout << "index = " << index << ", timeEach = " << timeEach << ", glfwGetTime() = " << glfwGetTime() << std::endl;
+                if (index <= 0 || index > loadingMessages->size())
+                {
+                    index = 0; // reset to first message if out of bounds
+                }
+                toml::array msgArray = *loadingMessages;
+                std::string message = msgArray[index].value<std::string>().value_or("Loading Errors...");
+                ImGui::Text("%s", message.c_str());
+            }
+
+            ImGui::End();
+
             ImGui::Render();
             return;
         }
@@ -1066,10 +1089,11 @@ private:
         init_info.CheckVkResultFn = check_vk_result;
         ImGui_ImplVulkan_Init(&init_info);
 
-        std::string filename = "testimage.jpg";
+        std::string filename = "images/splash.png";
         bool ret = LoadTextureFromFile(filename.c_str(), &my_texture);
         IM_ASSERT(ret);
         std::cout << "[*] Loaded texture: " << my_texture.DS << " from: " << filename << " with size: " << my_texture.Width << " x " << my_texture.Height << std::endl;
+        loadingMessagesTable = toml::parse_file("text/loading.toml");
     }
 
     void createDescriptorSets()
