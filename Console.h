@@ -49,14 +49,14 @@ namespace Ramsey
     public:
         void loadToml(toml::table &tbl);
         void saveToml(toml::table &tbl);
-        static std::string formatString(const char *fstring, ...);
+        static std::string formatString(const char *fstring, va_list args);
 
         Console();
         void addLogHistory(ImVec4 color, const char *environment_desc, const char *prepend, const char *fstring, va_list args_list);
-        void DebugLog(const char *environment_desc, const char *fstring, va_list args_list = nullptr);
-        void WarningLog(const char *environment_desc, const char *fstring, va_list args_list = nullptr);
-        void ErrorLog(const char *environment_desc, const char *fstring, va_list args_list = nullptr);
-        void Log(const char *environment_desc, const char *fstring, va_list args_list = nullptr);
+        void DebugLog(const char *environment_desc, const char *fstring, ...);
+        void WarningLog(const char *environment_desc, const char *fstring, ...);
+        void ErrorLog(const char *environment_desc, const char *fstring, ...);
+        void Log(const char *environment_desc, const char *fstring, ...);
         int executeCommand(std::string s);
         static int ConsoleCommandCallback(ImGuiInputTextCallbackData *data);
         int ActualConsoleCommandCallback(ImGuiInputTextCallbackData *data);

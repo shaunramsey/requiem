@@ -10,17 +10,17 @@
 #include "Console.h"
 
 // Make the UI compact because there are so many fields
-static void PushStyleCompact()
-{
-    ImGuiStyle &style = ImGui::GetStyle();
-    ImGui::PushStyleVarY(ImGuiStyleVar_FramePadding, (float)(int)(style.FramePadding.y * 0.60f));
-    ImGui::PushStyleVarY(ImGuiStyleVar_ItemSpacing, (float)(int)(style.ItemSpacing.y * 0.60f));
-}
+// static void PushStyleCompact()
+// {
+//     ImGuiStyle &style = ImGui::GetStyle();
+//     ImGui::PushStyleVarY(ImGuiStyleVar_FramePadding, (float)(int)(style.FramePadding.y * 0.60f));
+//     ImGui::PushStyleVarY(ImGuiStyleVar_ItemSpacing, (float)(int)(style.ItemSpacing.y * 0.60f));
+// }
 
-static void PopStyleCompact()
-{
-    ImGui::PopStyleVar(2);
-}
+// static void PopStyleCompact()
+// {
+//     ImGui::PopStyleVar(2);
+// }
 
 GraphicsSettings::GraphicsSettings() {}
 void GraphicsSettings::loadToml(toml::table &tbl)
@@ -217,11 +217,19 @@ GameSettings::GameSettings()
 }
 void GameSettings::loadDefaults(std::string filename)
 {
-    _console.Log("TOML", "[*] Loading game settings from toml");
-    settingsTable = toml::parse_file(filename);
-    consoleSettings.loadToml(settingsTable);
-    keyBindSettings.loadToml(settingsTable);
-    graphicsSettings.loadToml(settingsTable);
+    try
+    {
+        _console.Log("TOML", "[*] Loading game settings from toml");
+        std::cout << "about to load defaults" << std::endl;
+        settingsTable = toml::parse_file(filename);
+        consoleSettings.loadToml(settingsTable);
+        keyBindSettings.loadToml(settingsTable);
+        graphicsSettings.loadToml(settingsTable);
+    }
+    catch (const toml::parse_error &err)
+    {
+        _console.WarningLog("TOML", "[*] No game settings toml found, creating one from defaults");
+    }
 }
 
 void GameSettings::saveChanges(std::string filename)

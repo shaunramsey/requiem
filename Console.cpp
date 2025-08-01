@@ -98,11 +98,11 @@ namespace Ramsey
         tbl.insert("log_history", log_array);
     }
 
-    std::string Console::formatString(const char *fstring, ...)
+    std::string Console::formatString(const char *fstring, va_list args)
     {
-        va_list args;
+        /// va_list args;
         char *format = (char *)(fstring);
-        va_start(args, fstring);
+        /// va_start(args, fstring);
         std::string final_string = "";
         while (*format != '\0')
         {
@@ -140,7 +140,7 @@ namespace Ramsey
             }
             ++format;
         }
-        va_end(args);
+        /// va_end(args);
         return final_string;
     }
 
@@ -155,30 +155,47 @@ namespace Ramsey
     {
         std::string inputString = formatString(fstring, args_list);
         const auto nynow = std::chrono::zoned_time(new_york_tz, std::chrono::system_clock::now());
+        std::string padding = "          ";
+        if (environment_desc && strlen(environment_desc) < 10)
+        {
+            padding = std::string(10 - strlen(environment_desc), ' ');
+        }
         std::string now = "[";
-        now += std::format("{:%d-%m-%Y %H:%M:%OS}", nynow) + "] [" + environment_desc + "] ";
+        now += std::format("{:%d-%m-%Y %H:%M:%OS}", nynow) + "] [" + padding + environment_desc + "] ";
         log_history.push_back(ColorString(now + std::string(prepend) + inputString, color));
         timed_log.push_back(ColorTimedString(now + std::string(prepend) + inputString, color));
     }
 
-    void Console::DebugLog(const char *environment_desc, const char *fstring, va_list args_list)
+    void Console::DebugLog(const char *environment_desc, const char *fstring, ...)
     {
-        addLogHistory(gameSettings.consoleSettings.DebugColor, environment_desc, "  DEBUG: ", fstring, args_list);
+        va_list args;
+        va_start(args, fstring);
+        addLogHistory(gameSettings.consoleSettings.DebugColor, environment_desc, "[  DEBUG]: ", fstring, args);
+        va_end(args);
     }
 
-    void Console::WarningLog(const char *environment_desc, const char *fstring, va_list args_list)
+    void Console::WarningLog(const char *environment_desc, const char *fstring, ...)
     {
-        addLogHistory(gameSettings.consoleSettings.WarningColor, environment_desc, "WARNING: ", fstring, args_list);
+        va_list args;
+        va_start(args, fstring);
+        addLogHistory(gameSettings.consoleSettings.WarningColor, environment_desc, "[WARNING]: ", fstring, args);
+        va_end(args);
     }
 
-    void Console::ErrorLog(const char *environment_desc, const char *fstring, va_list args_list)
+    void Console::ErrorLog(const char *environment_desc, const char *fstring, ...)
     {
-        addLogHistory(gameSettings.consoleSettings.ErrorColor, environment_desc, "  ERROR: ", fstring, args_list);
+        va_list args;
+        va_start(args, fstring);
+        addLogHistory(gameSettings.consoleSettings.ErrorColor, environment_desc, "[  ERROR]: ", fstring, args);
+        va_end(args);
     }
 
-    void Console::Log(const char *environment_desc, const char *fstring, va_list args_list)
+    void Console::Log(const char *environment_desc, const char *fstring, ...)
     {
-        addLogHistory(gameSettings.consoleSettings.LogColor, environment_desc, "    LOG: ", fstring, args_list);
+        va_list args;
+        va_start(args, fstring);
+        addLogHistory(gameSettings.consoleSettings.LogColor, environment_desc, "[    LOG]: ", fstring, args);
+        va_end(args);
     }
 
     int Console::executeCommand(std::string s)

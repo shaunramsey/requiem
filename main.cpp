@@ -29,8 +29,9 @@
 #include "GameSettings.h"
 #include "externs.h"
 
-const uint32_t WIDTH = 800;
-const uint32_t HEIGHT = 800;
+// 1280x720, 1920x1080, 2560x1440, 3840x2160
+const uint32_t WIDTH = 1280;
+const uint32_t HEIGHT = 720;
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 GameSettings gameSettings;
@@ -68,7 +69,7 @@ struct MyTextureData
     VkBuffer UploadBuffer;
     VkDeviceMemory UploadBufferMemory;
 
-    MyTextureData() { memset(this, 0, sizeof(*this)); }
+    MyTextureData() {} // memset(this, 0, sizeof(*this)); }
 };
 
 static void check_vk_result(VkResult err)
@@ -205,7 +206,7 @@ private:
     bool _show_game_settings = false;
 
     GLFWwindow *window;
-    VkInstanceCreateInfo _createInfo;
+    VkInstanceCreateInfo _createInfo{};
     VkInstance instance;
     VkDebugUtilsMessengerEXT debugMessenger;
     VkSurfaceKHR surface;
@@ -265,6 +266,7 @@ private:
 
     void initSettings()
     {
+        _console.DebugLog("LOAD", "Loading Game Settings From TOML");
         gameSettings.loadDefaults();
         // Load uniform data from file
         std::ifstream file("build_number.txt");
@@ -277,6 +279,7 @@ private:
 
     void initWindow()
     {
+        _console.DebugLog("LOAD", "Initializing Window");
         glfwInit();
 
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -319,6 +322,7 @@ private:
 
     void initVulkan()
     {
+        _console.DebugLog("LOAD", "Initializing Vulkan");
         createInstance();
         setupDebugMessenger();
         createSurface();
@@ -753,7 +757,7 @@ private:
         ImGui::NewFrame();
         static bool show_demo_window = false;
 
-        static const double splashTime = 10.0f;
+        static const double splashTime = 1.0f;
         if (glfwGetTime() < splashTime)
         {
             static toml::array *loadingMessages = loadingMessagesTable["loading_messages"].as_array();
@@ -773,11 +777,11 @@ private:
             //_console.Log("LOAD", log.c_str(), nullptr);
             ImGui::Image((ImTextureID)my_texture.DS, size, ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), ImVec4(1.0, 1.0, 1.0, 1.0), ImVec4(1.0f, 0.0f, 0.0f, 1.0f)); // ImVec2(float(my_texture.Width), float(my_texture.Height)));
 
-            ImGui::End();
             ImGui::PopStyleVar(2);
 
             ImGui::SetNextWindowPos(ImVec2(size.x * 0.5f, size.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-            ImGui::Begin("Loading Messages", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar);
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 0.25f));
+            ImGui::BeginChild("Loading Messages", ImVec2(300.0f, 0.0f), ImGuiChildFlags_Borders, ImGuiWindowFlags_AlwaysUseWindowPadding); //, nullptr); //, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar);
             ImGui::Text("Loading... Please wait.");
             if (loadingMessages != nullptr)
             {
@@ -792,6 +796,9 @@ private:
                 std::string message = msgArray[index].value<std::string>().value_or("Loading Errors...");
                 ImGui::Text("%s", message.c_str());
             }
+
+            ImGui::EndChild();
+            ImGui::PopStyleColor();
 
             ImGui::End();
 
@@ -883,34 +890,6 @@ private:
 
         ImGui::Render();
     }
-
-    //    static float rot_rate = 1.0f;
-    //        // if(frameCount % 60 == 0){
-    // if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-    // {
-    //     UniformData.rotation += glm::vec2(0.0, rot_rate * dt);
-    // }
-    // if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-    // {
-    //     UniformData.rotation += glm::vec2(0.0, -rot_rate * dt);
-    // }
-    // if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-    // {
-    //     UniformData.rotation += glm::vec2(-rot_rate * dt, 0.0);
-    // }
-    // if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-    // {
-    //     UniformData.rotation += glm::vec2(rot_rate * dt, 0.0);
-    // }
-
-    // if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-    // {
-    //     UniformData.camera += glm::vec3(0.0, 0.0, 1.0 * dt);
-    // }
-    // if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-    // {
-    //     UniformData.camera -= glm::vec3(0.0, 0.0, 1.0 * dt);
-    // }
 
     void processImGuiEvents()
     {
@@ -1066,7 +1045,8 @@ private:
 
     void initImGui() // imguiinit
     {
-        std::cout << "[*] Initializing Dear ImGui" << std::endl;
+        //        std::cout << "[*] Initializing Dear ImGui" << std::endl;
+        _console.DebugLog("LOAD", "Initializing Dear ImGui", nullptr);
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         // ImGuiIO &io = ImGui::GetIO();
@@ -1092,8 +1072,17 @@ private:
         std::string filename = "images/splash.png";
         bool ret = LoadTextureFromFile(filename.c_str(), &my_texture);
         IM_ASSERT(ret);
-        std::cout << "[*] Loaded texture: " << my_texture.DS << " from: " << filename << " with size: " << my_texture.Width << " x " << my_texture.Height << std::endl;
-        loadingMessagesTable = toml::parse_file("text/loading.toml");
+        _console.Log("LOAD", "Loaded texture from file %s, size %d x %d", filename.c_str(), my_texture.Width, my_texture.Height);
+        // std::cout << "[*] Loaded texture: " << my_texture.DS << " from: " << filename << " with size: " << my_texture.Width << " x " << my_texture.Height << std::endl;
+
+        try
+        {
+            loadingMessagesTable = toml::parse_file("text/loading.toml");
+        }
+        catch (const toml::parse_error &err)
+        {
+            _console.WarningLog("TOML", "[*] Failed to load loading messages from toml: %s", err.what());
+        }
     }
 
     void createDescriptorSets()
@@ -1270,7 +1259,6 @@ private:
         auto extensions = getRequiredExtensions();
         _createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
         _createInfo.ppEnabledExtensionNames = extensions.data();
-
         VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
         if (enableValidationLayers)
         {
@@ -1292,10 +1280,12 @@ private:
         {
             throw std::runtime_error("failed to create instance!");
         }
+        std::cout << "[*] Vulkan Instance Created Successfully" << std::endl;
     }
 
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo)
     {
+
         createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
         createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
@@ -1455,7 +1445,7 @@ private:
 
         vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
         swapChainImages.resize(imageCount);
-        std::cout << "[*] Swapchain image count: " << imageCount << std::endl;
+        // std::cout << "[*] Swapchain image count: " << imageCount << std::endl;
         vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
 
         swapChainImageFormat = surfaceFormat.format;
@@ -2359,6 +2349,25 @@ private:
         }
         std::cerr << "  [*] Validation layer: " << pCallbackData->pMessage;
         std::cerr << " Type: " << messageType << " Severity:" << messageSeverity << " userdatanull?:" << datanull << std::endl;
+        if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+        {
+            _console.ErrorLog("VULKAN", "Validation Layer error message %s", pCallbackData->pMessage);
+        }
+        else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+        {
+            _console.WarningLog("VULKAN", "Validation Layer warning message %s", pCallbackData->pMessage);
+        }
+        else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
+        {
+            _console.DebugLog("VULKAN", "Validation Layer info message %s", pCallbackData->pMessage);
+        }
+        else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
+        {
+            _console.DebugLog("VULKAN", "Validation Layer info message %s", pCallbackData->pMessage);
+        }
+        //_console.ErrorLog("VULKAN", "Validation Layer error message %s", pCallbackData->pMessage);
+        //_console.ErrorLog("VULKAN", "Type: %d Severity: %d userdatanull? %s", messageType, messageSeverity, datanull.c_str());
+
         return VK_FALSE;
     }
 };
