@@ -219,8 +219,8 @@ void GameSettings::loadDefaults(std::string filename)
 {
     try
     {
-        _console.Log("TOML", "[*] Loading game settings from toml");
-        std::cout << "about to load defaults" << std::endl;
+        _console.Log("TOML", "[*] Loading game settings from \"%s\"", filename.c_str());
+        // std::cout << "about to load defaults" << std::endl;
         settingsTable = toml::parse_file(filename);
         consoleSettings.loadToml(settingsTable);
         keyBindSettings.loadToml(settingsTable);
@@ -228,13 +228,13 @@ void GameSettings::loadDefaults(std::string filename)
     }
     catch (const toml::parse_error &err)
     {
-        _console.WarningLog("TOML", "[*] No game settings toml found, creating one from defaults");
+        _console.WarningLog("TOML", "[*] No game settings toml found at \"%s\", using defaults", filename.c_str());
     }
 }
 
 void GameSettings::saveChanges(std::string filename)
 {
-    _console.Log("TOML", "[*] Saving game settings to toml");
+    _console.Log("TOML", "[*] Saving game settings to \"%s\"", filename.c_str());
 
     toml::table newTable;
     consoleSettings.saveToml(newTable);

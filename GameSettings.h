@@ -64,8 +64,8 @@ class GameSettings
 {
 public:
     GameSettings();
-    void loadDefaults(std::string filename = "main.toml");
-    void saveChanges(std::string filename = "main.toml");
+    void loadDefaults(std::string filename = "settings/main.toml");
+    void saveChanges(std::string filename = "settings/main.toml");
     bool isEqual(const GameSettings &other) const;
     ConsoleSettings consoleSettings;
     KeyBindSettings keyBindSettings;

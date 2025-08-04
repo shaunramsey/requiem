@@ -69,7 +69,7 @@ struct MyTextureData
     VkBuffer UploadBuffer;
     VkDeviceMemory UploadBufferMemory;
 
-    MyTextureData() {} // memset(this, 0, sizeof(*this)); }
+    MyTextureData() { memset(this, 0, sizeof(*this)); }
 };
 
 static void check_vk_result(VkResult err)
@@ -347,12 +347,47 @@ private:
         createSyncObjects();
     }
 
+    unsigned char *DefaultImage(MyTextureData *tex_data)
+    {
+        // Load a default image if the texture data is not set
+        tex_data->Width = 2;
+        tex_data->Height = 2;
+        tex_data->Channels = 4; // RGBA
+
+        // Create a 1x1 white pixel
+        unsigned char *image_data = new unsigned char[16];
+        image_data[0] = 255;  // R
+        image_data[1] = 100;  // G
+        image_data[2] = 255;  // B
+        image_data[3] = 255;  // A
+        image_data[4] = 0;    // R
+        image_data[5] = 0;    // G
+        image_data[6] = 0;    // B
+        image_data[7] = 255;  // A
+        image_data[8] = 0;    // R
+        image_data[9] = 0;    // G
+        image_data[10] = 0;   // B
+        image_data[11] = 255; // A
+        image_data[12] = 255; // R
+        image_data[13] = 100; // G
+        image_data[14] = 255; // B
+        image_data[15] = 255; // A
+
+        return image_data;
+    }
+
     // Helper function to load an image with common settings and return a MyTextureData with a VkDescriptorSet as a sort of Vulkan pointer
     bool LoadTextureFromFile(const char *filename, MyTextureData *tex_data)
     {
         // Specifying 4 channels forces stb to load the image in RGBA which is an easy format for Vulkan
         tex_data->Channels = 4;
         unsigned char *image_data = stbi_load(filename, &tex_data->Width, &tex_data->Height, 0, tex_data->Channels);
+
+        if (image_data == NULL)
+        {
+            _console.WarningLog("LOAD", "[*] Failed to load texture from file: \"%s\", using default image", filename);
+            image_data = DefaultImage(tex_data);
+        }
 
         if (image_data == NULL)
             return false;
@@ -1072,16 +1107,17 @@ private:
         std::string filename = "images/splash.png";
         bool ret = LoadTextureFromFile(filename.c_str(), &my_texture);
         IM_ASSERT(ret);
-        _console.Log("LOAD", "Loaded texture from file %s, size %d x %d", filename.c_str(), my_texture.Width, my_texture.Height);
+        _console.Log("LOAD", "Acquired texture: \"%s\", size %d x %d", filename.c_str(), my_texture.Width, my_texture.Height);
         // std::cout << "[*] Loaded texture: " << my_texture.DS << " from: " << filename << " with size: " << my_texture.Width << " x " << my_texture.Height << std::endl;
 
         try
         {
             loadingMessagesTable = toml::parse_file("text/loading.toml");
+            _console.Log("LOAD", "Splash messages loaded from \"text/loading.toml\"");
         }
         catch (const toml::parse_error &err)
         {
-            _console.WarningLog("TOML", "[*] Failed to load loading messages from toml: %s", err.what());
+            _console.WarningLog("TOML", "[*] Failed to read splash messages from \"%s\": %s", "text/loading.toml", err.what());
         }
     }
 
