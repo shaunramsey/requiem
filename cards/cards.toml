@@ -1,0 +1,19 @@
+
+# a card is an array
+# ID
+# card name
+# base color
+# texture
+# attack
+# defense
+# speed
+# gameplay text
+# descriptive text
+
+DreamCards = [
+    [0, "The First Nap", [1.0, 0.0, 1.0, 1.0], "NULL", 1, 1, 10, "Sleep.", "Gotta sleep sometime."],
+    [1, "A Brief Respite", [1.0, 0.0, 1.0, 1.0], "NULL", 1, 1, 10, "Rest.", "Relax and take things in."]
+]
+
+# A Brief Respite
+

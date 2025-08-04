@@ -3,7 +3,6 @@
 #include "imgui.h"
 #include <toml++/toml.hpp>
 #include "Helper.h"
-
 std::map<std::string, ImGuiKey> ImGuiKeyMap = {
     {"Tab", ImGuiKey_Tab},
     {"LeftArrow", ImGuiKey_LeftArrow},
@@ -316,6 +315,18 @@ namespace Helper
         arr.push_back(color.z);
         arr.push_back(color.w);
         return arr;
+    }
+
+    ImVec4 tomlArrayToImVec4(const toml::array &arr, const ImVec4 &default_value)
+    {
+        if (arr.size() >= 4)
+        {
+            return ImVec4(arr[0].value_or(default_value.x),
+                          arr[1].value_or(default_value.y),
+                          arr[2].value_or(default_value.z),
+                          arr[3].value_or(default_value.w));
+        }
+        return default_value;
     }
 
     ImVec4 tomlToImVec4(const toml::table &tbl, std::string key, ImVec4 default_value)

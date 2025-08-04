@@ -8,7 +8,7 @@ IMGUI_OBJS = "build\imgui.obj" "build\imgui_demo.obj" "build\imgui_draw.obj" "bu
 # IMGUI_OBJS = $(patsubst %.cpp,build/%.obj,$(IMGUI_SOURCES))
 
 TARGET = main.exe
-SOURCES = main.cpp build/Console.obj build/GameSettings.obj build/Helper.obj
+SOURCES = main.cpp build/Console.obj build/GameSettings.obj build/Helper.obj build/Card.obj 
 HEADERS = Console.h GameSettings.h utils.h Helper.h
 SHADERS = build/fragShader.spv build/vertShader.spv
 
@@ -29,6 +29,8 @@ build/GameSettings.obj: GameSettings.cpp $(HEADERS)
 	cl $(FLAGS) /c $(INCLUDES) GameSettings.cpp /Fo:build/GameSettings.obj
 build/Helper.obj: Helper.cpp $(HEADERS)
 	cl $(FLAGS) /c $(INCLUDES) Helper.cpp /Fo:build/Helper.obj
+build/Card.obj: Card.cpp Card.h Helper.h
+	cl $(FLAGS) /c $(INCLUDES) Card.cpp /Fo:build/Card.obj
 
 build\imgui_impl_vulkan.obj: $(IMGUI_PATH)/backends/imgui_impl_vulkan.cpp
 	cl /c $(FLAGS) $(INCLUDES)  $(IMGUI_PATH)/backends/imgui_impl_vulkan.cpp /Fo:$@

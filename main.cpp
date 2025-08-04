@@ -28,6 +28,7 @@
 #include "Console.h" //includes
 #include "GameSettings.h"
 #include "externs.h"
+#include "Card.h"
 
 // 1280x720, 1920x1080, 2560x1440, 3840x2160
 const uint32_t WIDTH = 1280;
@@ -37,6 +38,7 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 GameSettings gameSettings;
 GameSettings modifiableGameSettings; // a copy of game settings for use in the game settings display window
 Ramsey::Console _console;
+std::vector<Card> fullCardList; // a list of all cards in the game, used for card selection and display
 
 const std::vector<const char *> validationLayers = {
     "VK_LAYER_KHRONOS_validation"};
@@ -188,6 +190,7 @@ public:
     void run()
     {
         initSettings();
+        initGameplay();
         initWindow();
         initVulkan();
         initImGui(); // imguiinit call
@@ -275,6 +278,31 @@ private:
             file >> _buildNumber;
             file.close();
         }
+    }
+
+    void initGameplay()
+    {
+        _console.DebugLog("LOAD", "Loading Gameplay Data");
+        // Load cards from toml
+        try
+        {
+            auto cardsToml = toml::parse_file("cards/cards.toml");
+            if (!cardsToml.is_table())
+            {
+                _console.ErrorLog("LOAD", "Failed to load cards/cards.toml - not a table - there are no cards");
+                return;
+            }
+            loadCardsFromToml(cardsToml, fullCardList);
+            if (fullCardList.empty())
+            {
+                _console.ErrorLog("LOAD", "No cards found in cards/cards.toml");
+            }
+        }
+        catch (const toml::parse_error &err)
+        {
+            _console.ErrorLog("LOAD", "Failed to open the file for cards: cards/cards.toml: %s", err.what());
+        }
+        _console.DebugLog("LOAD", "Loaded %d cards from cards/cards.toml", fullCardList.size());
     }
 
     void initWindow()
