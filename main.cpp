@@ -954,7 +954,7 @@ private:
         ImGui::Render();
     }
 
-    void processImGuiEvents()
+    void processImGuiEvents(double dt)
     {
 
         //    if (ImGui::GetIO().WantCaptureKeyboard)
@@ -984,6 +984,32 @@ private:
         if (ImGui::IsKeyPressed(gameSettings.keyBindSettings.toggleSettingsKey))
         {
             toggleGameSettingsWindow();
+        }
+
+        dt *= 0.002;
+        if (ImGui::IsKeyDown(ImGuiKey_UpArrow))
+        {
+            UniformData.rotation += glm::vec2(0.0, -1.0 * dt);
+        }
+        if (ImGui::IsKeyDown(ImGuiKey_DownArrow))
+        {
+            UniformData.rotation += glm::vec2(0.0, 1.0 * dt);
+        }
+        if (ImGui::IsKeyDown(ImGuiKey_LeftArrow))
+        {
+            UniformData.rotation += glm::vec2(-1.0 * dt, 0.0);
+        }
+        if (ImGui::IsKeyDown(ImGuiKey_RightArrow))
+        {
+            UniformData.rotation += glm::vec2(1.0 * dt, 0.0);
+        }
+        if (ImGui::IsKeyDown(ImGuiKey_W))
+        {
+            UniformData.camera += glm::vec3(0.0, 0.0, 1. * dt);
+        }
+        if (ImGui::IsKeyDown(ImGuiKey_S))
+        {
+            UniformData.camera += glm::vec3(0.0, 0.0, -1. * dt);
         }
     }
 
@@ -1015,7 +1041,7 @@ private:
             // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
             // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 
-            processImGuiEvents();
+            processImGuiEvents(dt);
             glfwPollEvents();
 
             // get_info();

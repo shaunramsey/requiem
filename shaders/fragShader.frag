@@ -139,7 +139,7 @@ float sdPlane(vec3 p, vec3 n, float h) {
 // 
 
 
-vec2 map(vec3 p){
+vec2 map2(vec3 p){
     vec3 origin = vec3(0.,0.,0.);
 	float map = sdSphere(p, 1.0);
     map = min(map, sdSphere(p-vec3(0.0, 1.0, 0.0), 1.0));
@@ -151,6 +151,22 @@ vec2 map(vec3 p){
         return vec2(map, 4.0); // hit
     }
     return vec2(map, 0.0);
+}
+
+vec2 map(vec3 p) {
+    float height = 0.0;   //given x changes from 51.5 51.75, to 52.3 to 53 to 54
+    if(mod(p.x, 2.0) > 1.0)
+        height = fract(p.x); //51.5 is 0.5... 
+    else
+        height = 1.0 - fract(p.x);
+    height = height * 0.5 - 0.5;;
+    //height = 0.1 * sin(0.25 * p.x); 
+    height = sin(p.x) - 1.5;
+    float dist = abs(height - p.y);
+    if(dist < HIT_EPS){
+        return vec2(dist, 3.0);
+    }
+    return vec2(dist, 0.0);
 }
 
 vec3 get_normal(vec3 p){
@@ -205,19 +221,20 @@ vec2 ray_march(vec3 ro, vec3 rd){
     for(; i < MAX_STEPS; i++){
         vec3 p = ro + rd * t;
         vec2 hit = map(p);
-        t += hit.x;
+        vec3 normal = get_normal(p);
+        t += hit.x / (4.0 *length(normal));
         if(abs(hit.x) < HIT_EPS){
-            return vec2(t,hit.y); //hit.y is the material index
+            return vec2(t, hit.y); //hit.y is the material index
         }
         if(t > MAX_DIST) break; 
     }
     if(i >= MAX_STEPS) {
-        return vec2(MAX_DIST+1.0, 1.0); // 0  for no more steps
+        return vec2(MAX_DIST + 1.0, 1.0); // 1  for no more steps
     }
     if(t >= MAX_DIST) {
-        return vec2(MAX_DIST+1.0, 2.0); //1 for too far
+        return vec2(MAX_DIST + 1.0, 2.0); //2 for too far
     }
-	return vec2(MAX_DIST+1.0, 0.0); //2 should never happen
+	return vec2(MAX_DIST + 1.0, 0.0); //0 should never happen
 }
 
 
@@ -253,10 +270,15 @@ void main() {
     st.y = -st.y;
 
     vec3 ro = data.camera; //0,0,-3
-
-    vec3 rd = normalize(vec3(st, 1));
+    vec3 rd = normalize(vec3(st, 2));
     
-    const int num_samples = 100; //300, 100, 30
+    ro.yz *= rot2D(-data.rotation.y);
+    rd.yz *= rot2D(-data.rotation.y);
+    ro.xz *= rot2D(data.rotation.x);
+    rd.xz *= rot2D(data.rotation.x);
+
+
+    const int num_samples = 1; //300, 100, 30
     vec4 newColor = vec4(0.0);
     for(int i = 0; i < num_samples; i++){
         newColor += march_color(ro + vec3( vec2(float(i)*0.05/float(num_samples)), 0.0), rd);
