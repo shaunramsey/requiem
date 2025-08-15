@@ -12,6 +12,8 @@ layout(binding = 0) uniform ShaderData{
     float time;
 } data;
 
+layout(binding = 1) uniform sampler2D tex;
+
 
 #define Skin(object) Material(vec3(0.0), vec3(0.9, 0.75, 0.58), vec3(0.5), 5.0, object)
 
@@ -289,5 +291,5 @@ void main() {
     vec3 col = 0.5 + 0.5*cos(data.time + st.xyx + vec3(0,2,4));
     outColor = vec4 ( mix(newColor.xyz, col.xyz, length(newColor)), 1.0);
     outColor = newColor; 
-
+    outColor = texture(tex, fragCoord.xy / data.iResolution.xy);
 }

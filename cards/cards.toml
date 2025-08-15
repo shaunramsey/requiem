@@ -17,3 +17,9 @@ DreamCards = [
 
 # A Brief Respite
 
+
+#champions: The Mother, The Child
+Champions = [
+    [0, "The Mother", "Pronounced dead at birth.\nLeft for dead by her friends.\nAfter defeating death twice,\nand surviving untold demons,\nshe has survived for one purpose.\n She will do anything to protect you."],
+    [1, "The Intellect", "A beneficiary of privilege.\nWise and mature beyond their years.\nNever hesitates to dispense justice.\nNever hesitates to share wealth.\nWill do anything to fight the demons and protect the innocent."],
+]

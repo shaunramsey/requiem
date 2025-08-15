@@ -70,6 +70,7 @@ struct MyTextureData
     VkSampler Sampler;
     VkBuffer UploadBuffer;
     VkDeviceMemory UploadBufferMemory;
+    unsigned char *ImageData;
 
     MyTextureData() { memset(this, 0, sizeof(*this)); }
 };
@@ -362,13 +363,15 @@ private:
 
         createImGuiRenderPass();
 
+        LoadTextureDataFromFile("images/splash.png", &my_texture);
+
         createDescriptorSetLayout();
         createGraphicsPipeline(); // start
         createFramebuffers();
         createCommandPool();
         createVertexBuffer();
         createIndexBuffer();
-        createUniformBuffers(); // creating unifrom Buffers
+        createUniformBuffers(); // creating uniform Buffers
         createDescriptorPool();
         createDescriptorSets();
         createCommandBuffers();
@@ -404,8 +407,7 @@ private:
         return image_data;
     }
 
-    // Helper function to load an image with common settings and return a MyTextureData with a VkDescriptorSet as a sort of Vulkan pointer
-    bool LoadTextureFromFile(const char *filename, MyTextureData *tex_data)
+    bool LoadTextureDataFromFile(const char *filename, MyTextureData *tex_data)
     {
         // Specifying 4 channels forces stb to load the image in RGBA which is an easy format for Vulkan
         tex_data->Channels = 4;
@@ -419,9 +421,6 @@ private:
 
         if (image_data == NULL)
             return false;
-
-        // Calculate allocation size (in number of bytes)
-        size_t image_size = tex_data->Width * tex_data->Height * tex_data->Channels;
 
         VkResult err;
 
@@ -485,10 +484,19 @@ private:
             err = vkCreateSampler(device, &sampler_info, NullAllocator, &tex_data->Sampler);
             check_vk_result(err);
         }
+        tex_data->ImageData = image_data;
+        return true;
+    }
 
+    // Helper function to load an image with common settings and return a MyTextureData with a VkDescriptorSet as a sort of Vulkan pointer
+    bool ImGuiTextureSetup(MyTextureData *tex_data)
+    {
+
+        size_t image_size = tex_data->Width * tex_data->Height * tex_data->Channels;
+        VkResult err;
         // Create Descriptor Set using ImGUI's implementation
         tex_data->DS = ImGui_ImplVulkan_AddTexture(tex_data->Sampler, tex_data->ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
+        std::cout << "vulkan tex data ds is: " << tex_data->DS << std::endl;
         // Create Upload Buffer
         {
             VkBufferCreateInfo buffer_info = {};
@@ -515,7 +523,7 @@ private:
             void *map = NULL;
             err = vkMapMemory(device, tex_data->UploadBufferMemory, 0, image_size, 0, &map);
             check_vk_result(err);
-            memcpy(map, image_data, image_size);
+            memcpy(map, tex_data->ImageData, image_size);
             VkMappedMemoryRange range[1] = {};
             range[0].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
             range[0].memory = tex_data->UploadBufferMemory;
@@ -526,7 +534,7 @@ private:
         }
 
         // Release image memory using stb
-        stbi_image_free(image_data);
+        // stbi_image_free(image_data); // leaves the image data in main memory TODO
 
         // Create a command buffer that will perform following steps when hit in the command queue.
         // TODO: this works in the example, but may need input if this is an acceptable way to access the pool/create the command buffer.
@@ -1159,7 +1167,7 @@ private:
         ImGui_ImplVulkan_Init(&init_info);
 
         std::string filename = "images/splash.png";
-        bool ret = LoadTextureFromFile(filename.c_str(), &my_texture);
+        bool ret = ImGuiTextureSetup(&my_texture); //(filename.c_str(), &my_texture);
         IM_ASSERT(ret);
         _console.Log("LOAD", "Acquired texture: \"%s\", size %d x %d", filename.c_str(), my_texture.Width, my_texture.Height);
         // std::cout << "[*] Loaded texture: " << my_texture.DS << " from: " << filename << " with size: " << my_texture.Width << " x " << my_texture.Height << std::endl;
@@ -1197,29 +1205,44 @@ private:
             bufferInfo.offset = 0;
             bufferInfo.range = sizeof(ShaderData);
 
-            VkWriteDescriptorSet descriptorWrite{};
-            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.dstSet = descriptorSets[i];
-            descriptorWrite.dstBinding = 0;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.pBufferInfo = &bufferInfo;
+            VkDescriptorImageInfo imageInfo{};
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfo.imageView = my_texture.ImageView;
+            imageInfo.sampler = my_texture.Sampler;
 
-            vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+            std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+            descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[0].dstSet = descriptorSets[i];
+            descriptorWrites[0].dstBinding = 0;
+            descriptorWrites[0].dstArrayElement = 0;
+            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrites[0].descriptorCount = 1;
+            descriptorWrites[0].pBufferInfo = &bufferInfo;
+
+            descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[1].dstSet = descriptorSets[i];
+            descriptorWrites[1].dstBinding = 1;
+            descriptorWrites[1].dstArrayElement = 0;
+            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[1].descriptorCount = 1;
+            descriptorWrites[1].pImageInfo = &imageInfo;
+
+            vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
     }
 
     void createDescriptorPool()
     {
-        VkDescriptorPoolSize poolSize{};
-        poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+        std::array<VkDescriptorPoolSize, 2> mainPoolSizes{};
+        mainPoolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        mainPoolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+        mainPoolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        mainPoolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = 1;
-        poolInfo.pPoolSizes = &poolSize;
+        poolInfo.poolSizeCount = static_cast<uint32_t>(mainPoolSizes.size());
+        poolInfo.pPoolSizes = mainPoolSizes.data();
         poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
         if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
@@ -1298,15 +1321,31 @@ private:
         uboLayoutBinding.pImmutableSamplers = nullptr;
         uboLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+        VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+        samplerLayoutBinding.binding = 1;
+        samplerLayoutBinding.descriptorCount = 1;
+        samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        samplerLayoutBinding.pImmutableSamplers = nullptr;
+        samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
+
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = 1;
-        layoutInfo.pBindings = &uboLayoutBinding;
+        layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+        layoutInfo.pBindings = bindings.data();
 
         if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
         {
             throw std::runtime_error("failed to create descriptor set layout!");
         }
+        // VkDebugUtilsObjectNameInfoEXT nameInfo{};
+        // nameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        // nameInfo.objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT;
+        // nameInfo.objectHandle = (uint64_t)descriptorSetLayout;
+        // nameInfo.pObjectName = "MainFragmentShader:DescriptorSetLayout";
+
+        // vkSetDebugUtilsObjectNameEXT(device, &nameInfo);
     }
 
     void recreateSwapChain()
