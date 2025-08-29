@@ -19,3 +19,6 @@ We use a variety of libraries to make different things happen.
 [GitHub](https://github.com/nothings/stb/blob/master/stb_image.h)
 
 - Fonts under creative commons that we used: [fonts.license](fonts.license)
+
+Mt Everest Test images were grabbed from: https://manticorp.github.io/unrealheightmap/rights.html 
+© <a href="https://www.mapzen.com/rights">Mapzen</a>,  <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> , and <a href="https://www.mapzen.com/rights/#services-and-data-sources">others</a>.

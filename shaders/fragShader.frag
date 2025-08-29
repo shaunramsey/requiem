@@ -1,4 +1,3 @@
-
 #version 450
 
 
@@ -22,7 +21,7 @@ const float shadow_sharpness = 5.0; // 5-50
 #define HIT_EPS 0.001
 const int MAX_STEPS = 2048;
 const float MAX_DIST = 100.0;
-const vec2 EPS = vec2(0.01, 0.0);
+const vec2 EPS = vec2(0.001, 0.0); //used for normal calculation
 
 // Returns a pseudo-random float in [0, 1)
 float hash(vec2 p) {
@@ -157,13 +156,25 @@ vec2 map2(vec3 p){
 
 vec2 map(vec3 p) {
     float height = 0.0;   //given x changes from 51.5 51.75, to 52.3 to 53 to 54
-    if(mod(p.x, 2.0) > 1.0)
-        height = fract(p.x); //51.5 is 0.5... 
-    else
-        height = 1.0 - fract(p.x);
-    height = height * 0.5 - 0.5;;
+
+
+    // if(mod(p.x, 2.0) > 1.0)
+    //     height = fract(p.x); //51.5 is 0.5... 
+    // else
+    //     height = 1.0 - fract(p.x);
+    // height = height * 0.5 - 0.5;
+
     //height = 0.1 * sin(0.25 * p.x); 
-    height = sin(p.x) - 1.5;
+    //x and z are going to be our height look ups into the passed height field
+
+    height = sin(p.x)*sin(p.z) - 1.5;
+    float stretch = 40.0f;
+    vec3 f = mod(p, stretch) / stretch;
+
+    float colorOfTex = texture(tex, f.xz).r;
+    height = 2.0 * colorOfTex - 1.5;
+
+
     float dist = abs(height - p.y);
     if(dist < HIT_EPS){
         return vec2(dist, 3.0);
@@ -224,7 +235,7 @@ vec2 ray_march(vec3 ro, vec3 rd){
         vec3 p = ro + rd * t;
         vec2 hit = map(p);
         vec3 normal = get_normal(p);
-        t += hit.x / (4.0 *length(normal));
+        t += hit.x / (4.0 *length(normal) + 4.0);
         if(abs(hit.x) < HIT_EPS){
             return vec2(t, hit.y); //hit.y is the material index
         }
@@ -249,7 +260,11 @@ vec4 march_color(vec3 ro, vec3 rd) {
         int row = int(int(p.y + 0.5)/size);
         int col = int(int(p.x + 0.5)/size);
         if ((row+col)%2 == 0) {
-            return vec4(0.5, 0.5, 0.5, 1.0); // checkerboard pattern
+            if(p.y > 0.0) {
+                return vec4(0.5, 0.5, 0.5, 1.0); // checkerboard pattern
+            } else {
+                return vec4(0.0, 0.0, 0.5, 1.0); //blue check
+            }
         }
         return vec4(0.0, 0.0, 0.0, 1.0); // background color
     }
@@ -291,5 +306,11 @@ void main() {
     vec3 col = 0.5 + 0.5*cos(data.time + st.xyx + vec3(0,2,4));
     outColor = vec4 ( mix(newColor.xyz, col.xyz, length(newColor)), 1.0);
     outColor = newColor; 
-    outColor = texture(tex, fragCoord.xy / data.iResolution.xy);
+    float f = fragCoord.x;
+    // float size = 50.0f;
+    // if(mod(f, size) < size/4.0f) {
+    //     outColor = vec4(1.0, 0.0, 0.0, 1.0); //mix(vec4(1.0, 0.0, 0.0, 1.0), texture(tex, fragCoord.xy / data.iResolution.xy), 0.5);
+    // } else {
+    //     outColor = texture(tex, fragCoord.xy / data.iResolution.xy);
+    // }
 }

@@ -135,10 +135,10 @@ struct SwapChainSupportDetails
 
 struct ShaderData
 {
-    glm::vec2 res;
-    glm::vec2 rotation;
-    glm::vec3 camera;
-    float time;
+    glm::vec2 res;      // 0- 8 ... 0, 1
+    glm::vec2 rotation; // 8 - 16 ... 2, 3
+    glm::vec3 camera;   // 16 - 28 ... 4, 5, 6
+    float time;         // 28 - 32 ... 7
 };
 
 struct Vertex
@@ -363,7 +363,7 @@ private:
 
         createImGuiRenderPass();
 
-        LoadTextureDataFromFile("images/splash.png", &my_texture);
+        LoadTextureDataFromFile("images/curve3.png", &my_texture);
 
         createDescriptorSetLayout();
         createGraphicsPipeline(); // start
@@ -475,7 +475,7 @@ private:
             sampler_info.magFilter = VK_FILTER_LINEAR;
             sampler_info.minFilter = VK_FILTER_LINEAR;
             sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT; // outside image bounds just use border color
+            sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT; // outside image bounds just use
             sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
             sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
             sampler_info.minLod = -1000;
@@ -496,7 +496,8 @@ private:
         VkResult err;
         // Create Descriptor Set using ImGUI's implementation
         tex_data->DS = ImGui_ImplVulkan_AddTexture(tex_data->Sampler, tex_data->ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        std::cout << "vulkan tex data ds is: " << tex_data->DS << std::endl;
+        // std::cout << "vulkan tex data ds is: " << tex_data->DS << std::endl;
+
         // Create Upload Buffer
         {
             VkBufferCreateInfo buffer_info = {};
@@ -1013,11 +1014,11 @@ private:
         }
         if (ImGui::IsKeyDown(ImGuiKey_W))
         {
-            UniformData.camera += glm::vec3(0.0, 0.0, 1. * dt);
+            UniformData.camera += glm::vec3(0.0, 0.0, 5. * dt);
         }
         if (ImGui::IsKeyDown(ImGuiKey_S))
         {
-            UniformData.camera += glm::vec3(0.0, 0.0, -1. * dt);
+            UniformData.camera += glm::vec3(0.0, 0.0, -5. * dt);
         }
     }
 
@@ -1166,7 +1167,7 @@ private:
         init_info.CheckVkResultFn = check_vk_result;
         ImGui_ImplVulkan_Init(&init_info);
 
-        std::string filename = "images/splash.png";
+        std::string filename = "images/doesntdoanything.png";
         bool ret = ImGuiTextureSetup(&my_texture); //(filename.c_str(), &my_texture);
         IM_ASSERT(ret);
         _console.Log("LOAD", "Acquired texture: \"%s\", size %d x %d", filename.c_str(), my_texture.Width, my_texture.Height);
@@ -1228,6 +1229,7 @@ private:
             descriptorWrites[1].pImageInfo = &imageInfo;
 
             vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+            // printf("Frame %d, descriptor dst set: %p\n", i, descriptorSets[i]);
         }
     }
 
@@ -1339,11 +1341,12 @@ private:
         {
             throw std::runtime_error("failed to create descriptor set layout!");
         }
-        // VkDebugUtilsObjectNameInfoEXT nameInfo{};
-        // nameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
-        // nameInfo.objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT;
-        // nameInfo.objectHandle = (uint64_t)descriptorSetLayout;
-        // nameInfo.pObjectName = "MainFragmentShader:DescriptorSetLayout";
+        // printf("Layout info: %p, descriptorsetlayout: %p\n", &layoutInfo, descriptorSetLayout);
+        //  VkDebugUtilsObjectNameInfoEXT nameInfo{};
+        //  nameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        //  nameInfo.objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT;
+        //  nameInfo.objectHandle = (uint64_t)descriptorSetLayout;
+        //  nameInfo.pObjectName = "MainFragmentShader:DescriptorSetLayout";
 
         // vkSetDebugUtilsObjectNameEXT(device, &nameInfo);
     }
